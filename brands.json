@@ -1,0 +1,92 @@
+[
+  {
+    "id": "munsell",
+    "name": "Munsell 色票",
+    "name_en": "Munsell",
+    "category": "standard",
+    "source": "colortell.com",
+    "callbook": "a1",
+    "official_url": "https://munsell.com",
+    "count": 1625
+  },
+  {
+    "id": "pantone_fhi_cotton",
+    "name": "PANTONE 時尚棉布",
+    "name_en": "PANTONE FHI Cotton TCX",
+    "category": "standard",
+    "source": "colortell.com",
+    "callbook": "a2",
+    "official_url": "https://www.pantone.com",
+    "count": 2310
+  },
+  {
+    "id": "pantone_fhi_paper",
+    "name": "PANTONE 時尚紙",
+    "name_en": "PANTONE FHI Paper TCX",
+    "category": "standard",
+    "source": "colortell.com",
+    "callbook": "a3",
+    "official_url": "https://www.pantone.com",
+    "count": 2310
+  },
+  {
+    "id": "pantone_fhi_tpx",
+    "name": "PANTONE TPX 紙",
+    "name_en": "PANTONE FHI Paper TPX",
+    "category": "standard",
+    "source": "colortell.com",
+    "callbook": "a4",
+    "official_url": "https://www.pantone.com",
+    "count": 2100
+  },
+  {
+    "id": "cncscolor",
+    "name": "CNCS 中國色彩體系",
+    "name_en": "CNCSCOLOR (Coloro)",
+    "category": "standard",
+    "source": "colortell.com",
+    "callbook": "a5",
+    "official_url": "",
+    "count": 1000
+  },
+  {
+    "id": "dulux",
+    "name": "得利 Dulux",
+    "name_en": "Dulux",
+    "category": "paint",
+    "source": "colortell.com",
+    "callbook": "a6",
+    "official_url": "https://www.dulux.com.tw",
+    "count": 1654
+  },
+  {
+    "id": "dulux_matte",
+    "name": "得利 啞光系列",
+    "name_en": "Dulux Matte",
+    "category": "paint",
+    "source": "colortell.com",
+    "callbook": "a7",
+    "official_url": "https://www.dulux.com.tw",
+    "count": 1189
+  },
+  {
+    "id": "cbcc",
+    "name": "中國建築色卡 CBCC",
+    "name_en": "China Building Color Card",
+    "category": "standard",
+    "source": "colortell.com",
+    "callbook": "a8",
+    "official_url": "",
+    "count": 1026
+  },
+  {
+    "id": "nippon",
+    "name": "立邦 Nippon",
+    "name_en": "Nippon Paint",
+    "category": "paint",
+    "source": "colortell.com",
+    "callbook": "a9",
+    "official_url": "https://www.nipponpaint.com.tw",
+    "count": 1881
+  }
+]

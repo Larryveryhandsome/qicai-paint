@@ -1,0 +1,29 @@
+# 內部行政與第一版討論記錄,不上傳 repo
+行政/
+網站.txt
+[LINE]*.txt
+
+# 爬蟲原始檔 (data/raw/)
+# 重新爬即可重現,不必版控
+data/raw/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 第一版完成報告與部署說明 (已被 開發規劃-2026Q1.md 取代)
+專案完成報告.md
+部署說明.md
+
+# 舊測試頁 (已被 Claude Preview 取代)
+test.html
+
+# 舊範例資料 (已被 colors.json 取代)
+sample-data.json
