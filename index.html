@@ -22,7 +22,9 @@
                     <a href="#home" class="nav-link active">首頁</a>
                     <a href="#search" class="nav-link">色號查詢</a>
                     <a href="#convert" class="nav-link">色碼轉換</a>
-                    <a href="#about" class="nav-link">關於我們</a>
+                    <a href="#stores" class="nav-link">附近油漆行</a>
+                    <a href="#about" class="nav-link">關於</a>
+                    <a href="#" class="nav-link nav-fav" onclick="openFavorites(event)">★ 收藏<span id="fav-count" class="fav-count"></span></a>
                 </div>
             </div>
         </nav>
@@ -109,6 +111,10 @@
                 <div class="results-container" id="results-container" style="display: none;">
                     <h3>查詢結果</h3>
                     <div class="results-grid" id="results-grid"></div>
+                    <!-- 廣告版位 (Phase 2 預留,實際廣告主之後接入) -->
+                    <div class="ad-slot" data-slot="result-bottom" aria-hidden="true">
+                        <span class="ad-label">廣告版位</span>
+                    </div>
                 </div>
             </div>
         </section>
@@ -146,6 +152,27 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </section>
+
+        <!-- 附近油漆行區塊 -->
+        <section id="stores" class="stores-section">
+            <div class="container">
+                <h2 class="section-title">附近油漆行</h2>
+                <p class="section-subtitle">查到色號後，找離你最近的油漆五金行採購</p>
+
+                <div class="stores-controls">
+                    <input type="text" id="store-location" class="form-control" placeholder="輸入縣市或地區，例如：宜蘭市、台北市大安區">
+                    <button class="btn btn-primary" onclick="searchStores()">搜尋</button>
+                    <button class="btn btn-secondary" onclick="useMyLocation()">📍 用目前位置</button>
+                </div>
+
+                <div class="map-wrapper">
+                    <iframe id="stores-map" title="附近油漆行地圖" loading="lazy"
+                        referrerpolicy="no-referrer-when-downgrade"
+                        src="https://maps.google.com/maps?q=%E6%B2%B9%E6%BC%86%E8%A1%8C&output=embed"></iframe>
+                </div>
+                <p class="stores-hint"><small>提示：地圖會以你輸入的地區搜尋「油漆行」。實際營業時間與庫存請去電確認。</small></p>
             </div>
         </section>
 
@@ -200,6 +227,20 @@
             </div>
         </div>
     </footer>
+
+    <!-- 我的收藏彈窗 -->
+    <div class="modal-overlay" id="fav-modal" style="display:none;" onclick="closeFavorites(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>我的收藏</h3>
+                <button class="modal-close" onclick="closeFavorites(event)">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="results-grid" id="fav-grid"></div>
+                <p id="fav-empty" class="fav-empty">尚無收藏。在查詢結果點 ★ 即可收藏色號。</p>
+            </div>
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>
