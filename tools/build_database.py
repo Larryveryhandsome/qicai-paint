@@ -34,6 +34,7 @@ BRAND_OVERRIDES = {
     "a7": {"id": "dulux_matte",        "name": "得利 啞光系列",          "name_en": "Dulux Matte",              "category": "paint",     "official_url": "https://www.dulux.com.tw"},
     "a8": {"id": "cbcc",               "name": "中國建築色卡 CBCC",     "name_en": "China Building Color Card","category": "standard",  "official_url": ""},
     "a9": {"id": "nippon",             "name": "立邦 Nippon",           "name_en": "Nippon Paint",             "category": "paint",     "official_url": "https://www.nipponpaint.com.tw"},
+    "rainbow": {"id": "rainbow",       "name": "虹牌",                  "name_en": "Rainbow Paint",            "category": "paint",     "official_url": "https://www.rainbow-house.com.tw"},
 }
 
 
@@ -78,7 +79,8 @@ def slug(name: str) -> str:
 
 
 def collect():
-    files = sorted(RAW.glob("colortell_*.json"))
+    # colortell 各 callbook + 虹牌官方 (rainbow_colors.json)
+    files = sorted(RAW.glob("colortell_a*.json")) + sorted(RAW.glob("*_colors.json"))
     print(f"找到 {len(files)} 個 raw 檔")
 
     all_colors = []

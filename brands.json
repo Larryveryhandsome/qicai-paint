@@ -88,5 +88,15 @@
     "callbook": "a9",
     "official_url": "https://www.nipponpaint.com.tw",
     "count": 1881
+  },
+  {
+    "id": "rainbow",
+    "name": "虹牌",
+    "name_en": "Rainbow Paint",
+    "category": "paint",
+    "source": "colortell.com",
+    "callbook": "rainbow",
+    "official_url": "https://www.rainbow-house.com.tw",
+    "count": 2207
   }
 ]
