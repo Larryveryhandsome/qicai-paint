@@ -589,3 +589,157 @@ body {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* ===== Phase 2 新增樣式 ===== */
+
+/* 導航：我的收藏 */
+.nav-fav {
+    cursor: pointer;
+    white-space: nowrap;
+}
+.fav-count {
+    display: none;
+    background: #000;
+    color: #fff;
+    border-radius: 20px;
+    font-size: 12px;
+    padding: 1px 7px;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+.fav-count.has-items {
+    display: inline-block;
+}
+
+/* 結果卡片：收藏按鈕與市價 */
+.result-card {
+    position: relative;
+}
+.fav-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    color: #ccc;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+.fav-btn:hover { transform: scale(1.2); }
+.fav-btn.is-fav { color: #f5b301; }
+.result-card.is-seed {
+    border: 2px solid #000;
+}
+.price-line {
+    color: #000 !important;
+    font-weight: 600;
+}
+
+/* 廣告版位 */
+.ad-slot {
+    margin-top: 40px;
+    min-height: 90px;
+    border: 1px dashed #d0d0d0;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: repeating-linear-gradient(45deg, #fafafa, #fafafa 10px, #f4f4f4 10px, #f4f4f4 20px);
+}
+.ad-label {
+    color: #bbb;
+    font-size: 13px;
+    letter-spacing: 2px;
+}
+
+/* 附近油漆行 */
+.stores-section {
+    padding: 80px 0;
+    background: #f8f9fa;
+}
+.stores-controls {
+    max-width: 800px;
+    margin: 0 auto 24px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.stores-controls .form-control {
+    flex: 1;
+    min-width: 200px;
+}
+.map-wrapper {
+    max-width: 1000px;
+    margin: 0 auto;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+    aspect-ratio: 16 / 9;
+}
+.map-wrapper iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+}
+.stores-hint {
+    text-align: center;
+    color: #999;
+    margin-top: 16px;
+}
+
+/* 收藏彈窗 */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.2s ease-out;
+}
+.modal {
+    background: #fff;
+    border-radius: 16px;
+    max-width: 900px;
+    width: 100%;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 32px;
+    border-bottom: 1px solid #e5e5e5;
+}
+.modal-header h3 { font-size: 1.5rem; }
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 32px;
+    line-height: 1;
+    cursor: pointer;
+    color: #666;
+}
+.modal-close:hover { color: #000; }
+.modal-body {
+    padding: 32px;
+    overflow-y: auto;
+}
+.fav-empty {
+    text-align: center;
+    color: #999;
+    padding: 40px 0;
+}
+
+@media (max-width: 768px) {
+    .stores-controls { flex-direction: column; }
+    .stores-controls .btn { width: 100%; }
+}

@@ -175,6 +175,7 @@ function searchByCode() {
     // 用第一筆命中色作為查詢來源,找其他品牌的相近色
     const seed = matches[0];
     showNotification(`已找到 ${brandName} ${seed.code},正在比對其他品牌...`, 'info');
+    addHistory(seed);
     const similar = findSimilarColors(seed, colorDatabase);
     // 把 seed 自己也擺在最前面,方便對照
     displayResults([{ ...seed, similarity: 0, isSeed: true }, ...similar]);
@@ -490,6 +491,41 @@ function findSimilarColors(targetColor, database, threshold = 10, limit = 30) {
     return similarColors.slice(0, limit);
 }
 
+// 產生單張色卡 HTML (結果區與收藏彈窗共用)
+function renderCard(color, opts = {}) {
+    const cmyk = color.cmyk || rgbToCmyk(color.rgb);
+    const nameLine = color.name ? `${color.brand} · ${color.name}` : color.brand;
+    const fav = isFavorite(color);
+    let badge = '';
+    if (!opts.hideBadge) {
+        badge = color.isSeed
+            ? '<span class="similarity-score" style="background:#000;color:#fff;">查詢來源</span>'
+            : (typeof color.similarity === 'number' ? `<span class="similarity-score">ΔE ${color.similarity.toFixed(2)}</span>` : '');
+    }
+    // 市價 (Phase 2:資料若含 price 欄位才顯示)
+    const priceLine = color.price ? `<p class="price-line">參考價: ${color.price}</p>` : '';
+    // 收藏按鈕需要的精簡 color 物件
+    const slim = {
+        brand: color.brand, brand_id: color.brand_id, code: color.code,
+        name: color.name || '', hex: color.hex, rgb: color.rgb, cmyk: cmyk, lab: color.lab, price: color.price || null
+    };
+    const dataColor = encodeURIComponent(JSON.stringify(slim));
+    return `
+        <div class="result-card fade-in${color.isSeed ? ' is-seed' : ''}">
+            <button class="fav-btn ${fav ? 'is-fav' : ''}" data-color="${dataColor}" onclick="toggleFavorite(this)" title="加入/移除收藏" aria-label="收藏">${fav ? '★' : '☆'}</button>
+            <div class="color-preview-small" style="background-color: ${color.hex};"></div>
+            <div class="result-info">
+                <h4>${nameLine}</h4>
+                <p>色號: ${color.code}</p>
+                <p>HEX: ${color.hex}</p>
+                <p>RGB: ${color.rgb.join(', ')}</p>
+                <p>CMYK: ${cmyk.join(', ')}</p>
+                ${priceLine}
+                ${badge}
+            </div>
+        </div>`;
+}
+
 // 顯示結果
 function displayResults(results) {
     const container = document.getElementById('results-container');
@@ -498,25 +534,7 @@ function displayResults(results) {
     if (!results || results.length === 0) {
         grid.innerHTML = '<p style="text-align: center; color: #666;">未找到相似顏色</p>';
     } else {
-        grid.innerHTML = results.map(color => {
-            const cmyk = color.cmyk || rgbToCmyk(color.rgb);
-            const nameLine = color.name ? `${color.brand} · ${color.name}` : color.brand;
-            const badge = color.isSeed
-                ? '<span class="similarity-score" style="background:#000;color:#fff;">查詢來源</span>'
-                : `<span class="similarity-score">ΔE ${color.similarity.toFixed(2)}</span>`;
-            return `
-            <div class="result-card fade-in${color.isSeed ? ' is-seed' : ''}">
-                <div class="color-preview-small" style="background-color: ${color.hex};"></div>
-                <div class="result-info">
-                    <h4>${nameLine}</h4>
-                    <p>色號: ${color.code}</p>
-                    <p>HEX: ${color.hex}</p>
-                    <p>RGB: ${color.rgb.join(', ')}</p>
-                    <p>CMYK: ${cmyk.join(', ')}</p>
-                    ${badge}
-                </div>
-            </div>`;
-        }).join('');
+        grid.innerHTML = results.map(c => renderCard(c)).join('');
     }
 
     container.style.display = 'block';
@@ -651,3 +669,136 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+/* ===================== Phase 2:收藏 / 附近油漆行 / 歷史 ===================== */
+
+const FAV_KEY = 'qicai_favorites_v1';
+const HIST_KEY = 'qicai_history_v1';
+
+function colorKey(c) {
+    return `${c.brand_id || c.brand || ''}|${c.code || ''}`;
+}
+
+function loadFavorites() {
+    try { return JSON.parse(localStorage.getItem(FAV_KEY)) || []; }
+    catch { return []; }
+}
+
+function saveFavorites(list) {
+    localStorage.setItem(FAV_KEY, JSON.stringify(list));
+    updateFavCount();
+}
+
+function isFavorite(color) {
+    const key = colorKey(color);
+    return loadFavorites().some(c => colorKey(c) === key);
+}
+
+// 收藏 / 取消收藏 (由卡片上的 ★ 按鈕呼叫)
+function toggleFavorite(btn) {
+    let color;
+    try { color = JSON.parse(decodeURIComponent(btn.dataset.color)); }
+    catch { return; }
+
+    const key = colorKey(color);
+    let favs = loadFavorites();
+    const idx = favs.findIndex(c => colorKey(c) === key);
+
+    if (idx >= 0) {
+        favs.splice(idx, 1);
+        btn.classList.remove('is-fav');
+        btn.textContent = '☆';
+        showNotification('已移除收藏', 'info');
+    } else {
+        favs.push(color);
+        btn.classList.add('is-fav');
+        btn.textContent = '★';
+        showNotification(`已收藏 ${color.brand} ${color.code}`, 'success');
+    }
+    saveFavorites(favs);
+}
+
+function updateFavCount() {
+    const badge = document.getElementById('fav-count');
+    if (!badge) return;
+    const n = loadFavorites().length;
+    badge.textContent = n;
+    badge.classList.toggle('has-items', n > 0);
+}
+
+function openFavorites(e) {
+    if (e) e.preventDefault();
+    renderFavorites();
+    document.getElementById('fav-modal').style.display = 'flex';
+}
+
+function closeFavorites(e) {
+    if (e) e.preventDefault();
+    document.getElementById('fav-modal').style.display = 'none';
+}
+
+function renderFavorites() {
+    const grid = document.getElementById('fav-grid');
+    const empty = document.getElementById('fav-empty');
+    const favs = loadFavorites();
+
+    if (favs.length === 0) {
+        grid.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+    }
+    empty.style.display = 'none';
+    grid.innerHTML = favs.map(c => renderCard(c, { hideBadge: true })).join('');
+}
+
+/* ---- 附近油漆行 (Google Maps Embed,免 API key) ---- */
+
+function updateStoresMap(query) {
+    const iframe = document.getElementById('stores-map');
+    if (!iframe) return;
+    iframe.src = `https://maps.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
+}
+
+function searchStores() {
+    const loc = document.getElementById('store-location').value.trim();
+    if (!loc) {
+        showNotification('請輸入縣市或地區', 'warning');
+        return;
+    }
+    updateStoresMap(`${loc} 油漆行`);
+}
+
+function useMyLocation() {
+    if (!navigator.geolocation) {
+        showNotification('此瀏覽器不支援定位,請手動輸入地區', 'warning');
+        return;
+    }
+    showNotification('正在取得你的位置...', 'info');
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            const { latitude, longitude } = pos.coords;
+            const iframe = document.getElementById('stores-map');
+            // 以座標為中心搜尋油漆行
+            iframe.src = `https://maps.google.com/maps?q=%E6%B2%B9%E6%BC%86%E8%A1%8C/@${latitude},${longitude},14z&output=embed`;
+            showNotification('已定位,顯示附近油漆行', 'success');
+        },
+        () => showNotification('無法取得位置,請手動輸入地區', 'error'),
+        { timeout: 8000 }
+    );
+}
+
+/* ---- 比對歷史 (localStorage,記錄最近 10 筆查詢來源) ---- */
+
+function addHistory(color) {
+    if (!color) return;
+    let hist = [];
+    try { hist = JSON.parse(localStorage.getItem(HIST_KEY)) || []; } catch {}
+    const key = colorKey(color);
+    hist = hist.filter(c => colorKey(c) !== key);
+    hist.unshift({ brand: color.brand, brand_id: color.brand_id, code: color.code, hex: color.hex, ts: Date.now() });
+    hist = hist.slice(0, 10);
+    localStorage.setItem(HIST_KEY, JSON.stringify(hist));
+}
+
+// 頁面載入時初始化收藏數量
+document.addEventListener('DOMContentLoaded', updateFavCount);
