@@ -93,7 +93,7 @@ function setupColorConversion() {
 // 載入 brands.json 與 colors.json (依序),失敗時不使用假資料
 async function loadBrandsThenColors() {
     try {
-        const brandsRes = await fetch('brands.json');
+        const brandsRes = await fetch('brands.json', { cache: 'no-cache' });
         if (!brandsRes.ok) throw new Error('brands.json HTTP ' + brandsRes.status);
         brandsCatalog = await brandsRes.json();
         brandsByCode = Object.fromEntries(brandsCatalog.map(b => [b.id, b.name]));
@@ -105,7 +105,7 @@ async function loadBrandsThenColors() {
     }
 
     try {
-        const colorsRes = await fetch('colors.json');
+        const colorsRes = await fetch('colors.json', { cache: 'no-cache' });
         if (!colorsRes.ok) throw new Error('colors.json HTTP ' + colorsRes.status);
         const payload = await colorsRes.json();
         // 支援兩種格式: 純陣列 (舊) 或 {colors: [...]} (新 schema_version 2.0)

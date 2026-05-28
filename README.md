@@ -39,21 +39,26 @@ python -m http.server 8766
 
 ## 資料來源與品牌
 
-目前色號資料來自 [colortell.com](https://www.colortell.com),共 9 個色票系統、15,095 色號:
+目前共 10 個色票系統、17,302 色號。來源:[colortell.com](https://www.colortell.com) 與虹牌官網「彩虹屋」[rainbow-house.com.tw](https://www.rainbow-house.com.tw)。
 
-| 類別 | 廠牌 | 色號數 |
-|---|---|---|
-| 油漆 | 得利 Dulux | 1,654 |
-| 油漆 | 得利 啞光系列 | 1,189 |
-| 油漆 | 立邦 Nippon | 1,881 |
-| 國際標準 | PANTONE 時尚棉布 (TCX) | 2,310 |
-| 國際標準 | PANTONE 時尚紙 (TCX) | 2,310 |
-| 國際標準 | PANTONE TPX 紙 | 2,100 |
-| 國際標準 | Munsell 色票 | 1,625 |
-| 區域標準 | CNCS 中國色彩體系 | 1,000 |
-| 區域標準 | 中國建築色卡 CBCC | 1,026 |
+| 類別 | 廠牌 | 色號數 | 來源 |
+|---|---|---|---|
+| 油漆 | **虹牌** | 2,207 | 虹牌官網(官方資料) |
+| 油漆 | 立邦 Nippon | 1,881 | colortell |
+| 油漆 | 得利 Dulux | 1,654 | colortell |
+| 油漆 | 得利 啞光系列 | 1,189 | colortell |
+| 國際標準 | PANTONE 時尚棉布 (TCX) | 2,310 | colortell |
+| 國際標準 | PANTONE 時尚紙 (TCX) | 2,310 | colortell |
+| 國際標準 | PANTONE TPX 紙 | 2,100 | colortell |
+| 國際標準 | Munsell 色票 | 1,625 | colortell |
+| 區域標準 | CNCS 中國色彩體系 | 1,000 | colortell |
+| 區域標準 | 中國建築色卡 CBCC | 1,026 | colortell |
 
-**未來補強:** 虹牌、青葉、TOA、Sherwin-Williams(colortell 沒收錄,須從廠牌官網或 qtccolor.com 補)。
+YuXun 點名的 P0 品牌(虹牌、青葉、得利、立邦)中,**虹牌、得利、立邦已到位**。
+
+**青葉待補:** 青葉官網([chingyehpaint.com.tw](https://www.chingyehpaint.com.tw))為 Nuxt.js 動態頁,**只有色號、沒有 RGB/HEX**。唯一有青葉 RGB 的是 U7 優漆網(競品站),不宜直接爬。建議:向青葉原廠索取色卡電子檔,或人工建檔後用「上傳自有色卡」功能匯入。
+
+**其他可補:** TOA、Sherwin-Williams、三棵樹(後兩者 colortell/qtccolor 有,加 callbook 即可)。
 
 ## 重新爬資料
 
