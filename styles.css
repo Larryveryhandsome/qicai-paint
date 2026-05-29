@@ -795,3 +795,54 @@ body {
     background: #eee;
     color: #888;
 }
+
+/* 篩選列文字分層 */
+.filter-label-text {
+    display: inline-flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 2px 8px;
+}
+.filter-hint {
+    color: #999;
+    font-size: 0.82em;
+    font-weight: 400;
+}
+
+/* 篩選列手機優化 (放在最後以覆蓋桌機規則) */
+@media (max-width: 768px) {
+    .results-filter {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 14px 16px;
+    }
+    .filter-toggle {
+        width: 100%;
+        align-items: flex-start;
+        gap: 10px;
+        font-size: 15px;
+        line-height: 1.45;
+    }
+    .filter-toggle input {
+        width: 22px;
+        height: 22px;
+        flex-shrink: 0;
+        margin-top: 1px;
+    }
+    .filter-hint {
+        display: block;
+        width: 100%;
+    }
+    .result-count {
+        font-size: 13px;
+        padding-left: 32px;
+    }
+    /* 結果卡片標籤在窄螢幕換行時不擠 */
+    .result-info h4 {
+        line-height: 1.5;
+    }
+    .cat-tag {
+        margin-left: 0;
+    }
+}
