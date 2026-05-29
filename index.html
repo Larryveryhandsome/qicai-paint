@@ -6,7 +6,21 @@
     <title>漆彩 — 跨品牌油漆色號對照工具</title>
     <meta name="description" content="輸入任何品牌的油漆色號或 HEX,即查到其他品牌的相近色號。為業主與承包商打造的跨品牌色彩對照工具。">
     <meta name="theme-color" content="#000000">
-    <link rel="stylesheet" href="styles.css?v=20260529h">
+
+    <!-- 社群分享預覽 (LINE / Facebook / Twitter) -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="漆彩">
+    <meta property="og:title" content="漆彩 — 跨品牌油漆色號對照工具">
+    <meta property="og:description" content="設計師指定 A 牌,只找得到 B 牌的油漆行?輸入色號或 HEX,即查到所有品牌的相近色號。為業主與承包商打造。">
+    <meta property="og:url" content="https://paint.zengzhisui.com/">
+    <meta property="og:image" content="https://paint.zengzhisui.com/%E5%BD%A2%E8%B1%A1/%E6%BC%86%E5%BD%A9LOGO.png">
+    <meta property="og:locale" content="zh_TW">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="漆彩 — 跨品牌油漆色號對照工具">
+    <meta name="twitter:description" content="輸入色號或 HEX,即查到所有品牌的相近色號。為業主與承包商打造。">
+    <meta name="twitter:image" content="https://paint.zengzhisui.com/%E5%BD%A2%E8%B1%A1/%E6%BC%86%E5%BD%A9LOGO.png">
+
+    <link rel="stylesheet" href="styles.css?v=20260529i">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="icon" type="image/png" href="形象/漆彩LOGO.png">
 </head>
@@ -18,7 +32,8 @@
                     <img src="形象/漆彩LOGO.png" alt="漆彩" class="logo-img">
                     <span class="logo-text">漆彩</span>
                 </div>
-                <div class="nav-links">
+                <button class="nav-toggle" id="nav-toggle" aria-label="開啟選單" aria-expanded="false" aria-controls="nav-links" onclick="toggleNav()">☰</button>
+                <div class="nav-links" id="nav-links">
                     <a href="#home" class="nav-link active">首頁</a>
                     <a href="#search" class="nav-link">色號查詢</a>
                     <a href="#convert" class="nav-link">色碼轉換</a>
@@ -280,6 +295,6 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260529h"></script>
+    <script src="script.js?v=20260529i"></script>
 </body>
 </html>
