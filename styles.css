@@ -846,3 +846,87 @@ body {
         margin-left: 0;
     }
 }
+
+/* ===== 最近查詢 / 自有色卡 / 轉換橋接 (v=20260529e) ===== */
+
+/* 導航：最近查詢 (沿用收藏徽章樣式) */
+.nav-hist {
+    cursor: pointer;
+    white-space: nowrap;
+}
+.hist-count {
+    display: none;
+    background: #888;
+    color: #fff;
+    border-radius: 20px;
+    font-size: 12px;
+    padding: 1px 7px;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+.hist-count.has-items {
+    display: inline-block;
+}
+
+/* 自有色卡標籤 */
+.cat-custom {
+    background: #e7eefc;
+    color: #2b5bd7;
+}
+
+/* 色碼轉換 → 查詢的橋接按鈕 */
+.convert-actions {
+    margin-top: 16px;
+}
+.convert-actions .btn {
+    width: 100%;
+}
+
+/* 最近查詢清單 */
+.hist-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.hist-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    text-align: left;
+    background: #f8f9fa;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    font: inherit;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+.hist-item:hover {
+    background: #f0f1f3;
+    border-color: #ddd;
+}
+.hist-swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+.hist-label {
+    flex: 1;
+    font-weight: 500;
+    color: #222;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.hist-time {
+    color: #999;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+.hist-footer {
+    margin-top: 20px;
+    text-align: center;
+}
