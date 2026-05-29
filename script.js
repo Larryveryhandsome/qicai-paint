@@ -184,7 +184,7 @@ function searchByCode() {
     // 用第一筆命中色作為查詢來源,找其他品牌的相近色
     const seed = matches[0];
     showNotification(`已找到 ${brandName} ${seed.code},正在比對其他品牌...`, 'info');
-    addHistory(seed);
+    addHistory({ kind: 'code', brand: seed.brand, brand_id: seed.brand_id, code: seed.code, hex: seed.hex, name: seed.name });
     lastQuery = { seed, showSeed: true };
     runComparison();
 }
@@ -215,22 +215,34 @@ function searchByColor() {
         showNotification('色碼格式錯誤', 'error');
         return;
     }
-    
-    // 轉換為LAB色彩空間
-    const labColor = rgbToLab(targetColor);
-    
-    // 建立虛擬色號物件
+
+    runColorSearch(targetColor);
+}
+
+// 以 RGB 值為來源跑相近色比對 (searchByColor / 色碼轉換橋接 / 歷史重播共用)
+function runColorSearch(targetColor) {
+    if (!Array.isArray(targetColor) || targetColor.length < 3) {
+        showNotification('色碼格式錯誤', 'error');
+        return;
+    }
+    if (!colorDatabase.length) {
+        showNotification('色號資料尚未載入完成,請稍候或重新整理頁面', 'warning');
+        return;
+    }
+
+    const hex = rgbToHex(targetColor);
+    // 建立虛擬色號物件 (查詢色不顯示為來源卡片)
     const virtualColor = {
         brand: "查詢色",
         code: "QUERY",
-        hex: rgbToHex(targetColor),
+        hex: hex,
         rgb: targetColor,
-        lab: labColor,
+        lab: rgbToLab(targetColor),
         name: "查詢顏色",
         url: "#"
     };
-    
-    // 尋找相似顏色 (查詢色為虛擬色,不顯示為來源卡片)
+
+    addHistory({ kind: 'color', brand: 'HEX 查詢', code: hex, hex: hex });
     lastQuery = { seed: virtualColor, showSeed: false };
     runComparison();
 }
@@ -280,22 +292,63 @@ function processFile(file) {
     const reader = new FileReader();
     reader.onload = function(e) {
         try {
-            let data;
+            let parsed;
             if (file.name.endsWith('.json')) {
-                data = JSON.parse(e.target.result);
+                parsed = JSON.parse(e.target.result);
             } else if (file.name.endsWith('.csv')) {
-                data = parseCSV(e.target.result);
+                parsed = parseCSV(e.target.result);
+            } else {
+                showNotification('僅支援 CSV 或 JSON 檔案', 'error');
+                return;
             }
-            
-            if (data && data.length > 0) {
-                colorDatabase = colorDatabase.concat(data);
-                showNotification(`成功載入 ${data.length} 筆色號資料`, 'success');
+
+            // 支援純陣列或 {colors:[...]} 兩種格式
+            const rows = Array.isArray(parsed) ? parsed : (parsed && parsed.colors) || [];
+            const data = normalizeUploadedColors(rows);
+
+            if (data.length > 0) {
+                // 移除前一次上傳的自有色卡,避免重複累積
+                colorDatabase = colorDatabase.filter(c => c.brand_id !== 'custom').concat(data);
+                showNotification(`成功載入 ${data.length} 筆自有色卡,已可在比對中使用`, 'success');
+            } else {
+                showNotification('未解析到有效色號(每筆需含 hex 或 rgb 欄位)', 'error');
             }
         } catch (error) {
-            showNotification('檔案格式錯誤', 'error');
+            showNotification('檔案格式錯誤,無法解析', 'error');
         }
     };
     reader.readAsText(file);
+}
+
+// 把上傳的原始資料正規化成內部色號物件:補齊 rgb/hex/lab/cmyk,過濾無效列
+function normalizeUploadedColors(rows) {
+    const out = [];
+    if (!Array.isArray(rows)) return out;
+    rows.forEach(row => {
+        if (!row || typeof row !== 'object') return;
+        let rgb = null;
+        if (Array.isArray(row.rgb) && row.rgb.length >= 3) {
+            rgb = row.rgb.map(Number);
+        } else if (typeof row.rgb === 'string') {
+            rgb = parseRGB(row.rgb);
+        }
+        let hex = (typeof row.hex === 'string' && row.hex.trim()) ? row.hex.trim() : null;
+        if (!rgb && hex) rgb = hexToRgb(hex);
+        if (!rgb || rgb.some(v => !Number.isFinite(v) || v < 0 || v > 255)) return; // 跳過無效列
+        if (!hex) hex = rgbToHex(rgb);
+        out.push({
+            brand: row.brand || '我的色卡',
+            brand_id: 'custom',
+            code: String(row.code || row.name || hex),
+            name: row.name || '',
+            hex: hex,
+            rgb: rgb,
+            lab: (Array.isArray(row.lab) && row.lab.length >= 3) ? row.lab.map(Number) : rgbToLab(rgb),
+            cmyk: (Array.isArray(row.cmyk) && row.cmyk.length >= 4) ? row.cmyk.map(Number) : rgbToCmyk(rgb),
+            category: 'custom'
+        });
+    });
+    return out;
 }
 
 // 色碼轉換功能
@@ -399,47 +452,55 @@ function cmykToRgb(cmyk) {
     ];
 }
 
+// 精確 sRGB → LAB (D65) — 與 tools/build_database.py 一致,確保查詢色與色庫同一套座標。
+// 舊版省略 gamma 線性化與白點正規化,深色 L 值會嚴重偏高 (例如 rgb[44,22,32] 算成 L≈39,正解約 10.7),
+// 導致「依 HEX/RGB 查」與色碼轉換比對到錯的顏色。
 function rgbToLab(rgb) {
-    // 簡化的RGB到LAB轉換
     if (!Array.isArray(rgb) || rgb.length < 3) return [0, 0, 0];
-    const [r, g, b] = rgb.map(x => x / 255);
-    
-    // 轉換到XYZ
-    const x = r * 0.4124 + g * 0.3576 + b * 0.1805;
-    const y = r * 0.2126 + g * 0.7152 + b * 0.0722;
-    const z = r * 0.0193 + g * 0.1192 + b * 0.9505;
-    
-    // 轉換到LAB
-    const l = 116 * Math.pow(y, 1/3) - 16;
-    const a = 500 * (Math.pow(x, 1/3) - Math.pow(y, 1/3));
-    const b_lab = 200 * (Math.pow(y, 1/3) - Math.pow(z, 1/3));
-    
-    return [
-        Math.round(l),
-        Math.round(a),
-        Math.round(b_lab)
-    ];
+    const gc = c => (c > 0.04045 ? Math.pow((c + 0.055) / 1.055, 2.4) : c / 12.92);
+    const [r, g, b] = rgb.map(v => gc(v / 255));
+
+    // sRGB → XYZ (D65)
+    const x = r * 0.4124564 + g * 0.3575761 + b * 0.1804375;
+    const y = r * 0.2126729 + g * 0.7151522 + b * 0.0721750;
+    const z = r * 0.0193339 + g * 0.1191920 + b * 0.9503041;
+
+    // 參考白 D65
+    const xn = 0.95047, yn = 1.00000, zn = 1.08883;
+    const f = t => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+    const fx = f(x / xn), fy = f(y / yn), fz = f(z / zn);
+
+    const L = 116 * fy - 16;
+    const a = 500 * (fx - fy);
+    const bLab = 200 * (fy - fz);
+
+    // 保留兩位小數,與色庫精度一致
+    return [Math.round(L * 100) / 100, Math.round(a * 100) / 100, Math.round(bLab * 100) / 100];
 }
 
+// 精確 LAB → sRGB (D65),為上式的反運算 (供色碼轉換顯示)
 function labToRgb(lab) {
-    // 簡化的LAB到RGB轉換
-    const [l, a, b] = lab;
-    
-    // 轉換到XYZ
-    const y = Math.pow((l + 16) / 116, 3);
-    const x = Math.pow(a / 500 + Math.pow(y, 1/3), 3);
-    const z = Math.pow(Math.pow(y, 1/3) - b / 200, 3);
-    
-    // 轉換到RGB
-    const r = x * 3.2406 + y * -1.5372 + z * -0.4986;
-    const g = x * -0.9689 + y * 1.8758 + z * 0.0415;
-    const b_rgb = x * 0.0557 + y * -0.2040 + z * 1.0570;
-    
-    return [
-        Math.max(0, Math.min(255, Math.round(r * 255))),
-        Math.max(0, Math.min(255, Math.round(g * 255))),
-        Math.max(0, Math.min(255, Math.round(b_rgb * 255)))
-    ];
+    if (!Array.isArray(lab) || lab.length < 3) return [0, 0, 0];
+    const [L, a, b] = lab;
+    const fy = (L + 16) / 116;
+    const fx = fy + a / 500;
+    const fz = fy - b / 200;
+    const finv = t => {
+        const t3 = t * t * t;
+        return t3 > 0.008856 ? t3 : (t - 16 / 116) / 7.787;
+    };
+    const xn = 0.95047, yn = 1.00000, zn = 1.08883;
+    const x = finv(fx) * xn, y = finv(fy) * yn, z = finv(fz) * zn;
+
+    // XYZ → 線性 sRGB
+    let r = x * 3.2404542 + y * -1.5371385 + z * -0.4985314;
+    let g = x * -0.9692660 + y * 1.8760108 + z * 0.0415560;
+    let bRgb = x * 0.0556434 + y * -0.2040259 + z * 1.0572252;
+
+    // 線性 → gamma 編碼
+    const ge = c => (c > 0.0031308 ? 1.055 * Math.pow(c, 1 / 2.4) - 0.055 : 12.92 * c);
+    const clamp = v => Math.max(0, Math.min(255, Math.round(ge(v) * 255)));
+    return [clamp(r), clamp(g), clamp(bRgb)];
 }
 
 // CIEDE2000 色差演算法
@@ -552,7 +613,8 @@ function renderCard(color, opts = {}) {
     // 類型標示:市售油漆 vs 色彩標準
     const catTag = color.category === 'paint'
         ? '<span class="cat-tag cat-paint">市售油漆</span>'
-        : (color.category === 'standard' ? '<span class="cat-tag cat-standard">色彩標準</span>' : '');
+        : (color.category === 'standard' ? '<span class="cat-tag cat-standard">色彩標準</span>'
+        : (color.category === 'custom' ? '<span class="cat-tag cat-custom">自有色卡</span>' : ''));
     // 收藏按鈕需要的精簡 color 物件
     const slim = {
         brand: color.brand, brand_id: color.brand_id, code: color.code,
@@ -862,19 +924,151 @@ function useMyLocation() {
 
 /* ---- 比對歷史 (localStorage,記錄最近 10 筆查詢來源) ---- */
 
-function addHistory(color) {
-    if (!color) return;
-    // 整段包 try-catch:無痕模式/配額滿時略過歷史,絕不影響查詢主流程
+function loadHistory() {
+    try { return JSON.parse(localStorage.getItem(HIST_KEY)) || []; }
+    catch { return []; }
+}
+
+// 記錄一筆查詢來源。entry.kind: 'code' (品牌色號) 或 'color' (HEX/RGB)
+// 整段包 try-catch:無痕模式/配額滿時略過歷史,絕不影響查詢主流程
+function addHistory(entry) {
+    if (!entry) return;
     try {
-        let hist = JSON.parse(localStorage.getItem(HIST_KEY)) || [];
-        const key = colorKey(color);
-        hist = hist.filter(c => colorKey(c) !== key);
-        hist.unshift({ brand: color.brand, brand_id: color.brand_id, code: color.code, hex: color.hex, ts: Date.now() });
-        localStorage.setItem(HIST_KEY, JSON.stringify(hist.slice(0, 10)));
+        const key = entry.kind === 'color'
+            ? `color|${entry.hex || ''}`
+            : `${entry.brand_id || entry.brand || ''}|${entry.code || ''}`;
+        let hist = loadHistory().filter(h => h._key !== key);
+        hist.unshift({
+            _key: key,
+            kind: entry.kind || 'code',
+            brand: entry.brand || '',
+            brand_id: entry.brand_id || '',
+            code: entry.code || '',
+            hex: entry.hex || '',
+            name: entry.name || '',
+            ts: Date.now()
+        });
+        localStorage.setItem(HIST_KEY, JSON.stringify(hist.slice(0, 12)));
     } catch (e) {
         /* 略過歷史記錄 */
     }
+    updateHistCount();
 }
 
-// 頁面載入時初始化收藏數量
-document.addEventListener('DOMContentLoaded', updateFavCount);
+function updateHistCount() {
+    const badge = document.getElementById('hist-count');
+    if (!badge) return;
+    const n = loadHistory().length;
+    badge.textContent = n;
+    badge.classList.toggle('has-items', n > 0);
+}
+
+function openHistory(e) {
+    if (e) e.preventDefault();
+    renderHistory();
+    document.getElementById('hist-modal').style.display = 'flex';
+}
+
+function closeHistory(e) {
+    if (e) e.preventDefault();
+    document.getElementById('hist-modal').style.display = 'none';
+}
+
+function timeAgo(ts) {
+    if (!ts) return '';
+    const s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 60) return '剛剛';
+    if (s < 3600) return `${Math.floor(s / 60)} 分鐘前`;
+    if (s < 86400) return `${Math.floor(s / 3600)} 小時前`;
+    return `${Math.floor(s / 86400)} 天前`;
+}
+
+function renderHistory() {
+    const list = document.getElementById('hist-list');
+    const empty = document.getElementById('hist-empty');
+    const hist = loadHistory();
+
+    if (!hist.length) {
+        list.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+    }
+    empty.style.display = 'none';
+    list.innerHTML = hist.map((h, i) => {
+        const safeHex = /^#?[0-9A-Fa-f]{3,8}$/.test(String(h.hex || '')) ? h.hex : '#cccccc';
+        const label = h.kind === 'color'
+            ? `HEX 查詢 ${escapeHtml(h.hex)}`
+            : `${escapeHtml(h.brand)} ${escapeHtml(h.code)}${h.name ? ' · ' + escapeHtml(h.name) : ''}`;
+        return `
+            <button class="hist-item" onclick="replayHistory(${i})" title="重新查詢">
+                <span class="hist-swatch" style="background-color:${safeHex};"></span>
+                <span class="hist-label">${label}</span>
+                <span class="hist-time">${timeAgo(h.ts)}</span>
+            </button>`;
+    }).join('');
+}
+
+// 重播一筆歷史查詢
+function replayHistory(idx) {
+    const hist = loadHistory();
+    const h = hist[idx];
+    if (!h) return;
+    closeHistory();
+
+    if (h.kind === 'color') {
+        const rgb = hexToRgb(h.hex);
+        if (!rgb) { showNotification('色碼無效,無法重新查詢', 'warning'); return; }
+        runColorSearch(rgb);
+        return;
+    }
+    // 品牌色號:回色庫找出來源色
+    if (!colorDatabase.length) {
+        showNotification('色號資料尚未載入完成,請稍候', 'warning');
+        return;
+    }
+    const seed = colorDatabase.find(c =>
+        (c.brand_id === h.brand_id || c.brand === h.brand) && String(c.code) === String(h.code));
+    if (!seed) {
+        showNotification('找不到此色號(色庫可能已更新)', 'warning');
+        return;
+    }
+    lastQuery = { seed, showSeed: true };
+    runComparison();
+}
+
+function clearHistory() {
+    try { localStorage.removeItem(HIST_KEY); } catch (e) { /* ignore */ }
+    renderHistory();
+    updateHistCount();
+    showNotification('已清除查詢紀錄', 'info');
+}
+
+// 色碼轉換 → 以目前顏色查相近油漆 (橋接轉換與查詢)
+function searchFromConverter() {
+    const hex = (document.getElementById('convert-hex').value || '').trim();
+    const rgb = hexToRgb(hex);
+    if (!rgb) {
+        showNotification('請先在上方輸入有效的 HEX 色碼', 'warning');
+        return;
+    }
+    runColorSearch(rgb);
+}
+
+// Enter 鍵即查詢 (色號 / HEX / RGB / 地區)
+function setupKeyboardShortcuts() {
+    const onEnter = (id, fn) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); fn(); } });
+    };
+    onEnter('color-code', searchByCode);
+    onEnter('hex-input', searchByColor);
+    onEnter('rgb-input', searchByColor);
+    onEnter('store-location', searchStores);
+}
+
+// 頁面載入時初始化收藏 / 歷史數量與鍵盤快捷鍵
+document.addEventListener('DOMContentLoaded', function() {
+    updateFavCount();
+    updateHistCount();
+    setupKeyboardShortcuts();
+});

@@ -6,7 +6,7 @@
     <title>漆彩 — 跨品牌油漆色號對照工具</title>
     <meta name="description" content="輸入任何品牌的油漆色號或 HEX,即查到其他品牌的相近色號。為業主與承包商打造的跨品牌色彩對照工具。">
     <meta name="theme-color" content="#000000">
-    <link rel="stylesheet" href="styles.css?v=20260529d">
+    <link rel="stylesheet" href="styles.css?v=20260529e">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="icon" type="image/png" href="形象/漆彩LOGO.png">
 </head>
@@ -24,6 +24,7 @@
                     <a href="#convert" class="nav-link">色碼轉換</a>
                     <a href="#stores" class="nav-link">附近油漆行</a>
                     <a href="#about" class="nav-link">關於</a>
+                    <a href="#" class="nav-link nav-hist" onclick="openHistory(event)">↺ 最近<span id="hist-count" class="hist-count"></span></a>
                     <a href="#" class="nav-link nav-fav" onclick="openFavorites(event)">★ 收藏<span id="fav-count" class="fav-count"></span></a>
                 </div>
             </div>
@@ -157,6 +158,9 @@
                             <p>色彩預覽</p>
                             <p id="preview-text">請輸入色碼</p>
                         </div>
+                        <div class="convert-actions">
+                            <button class="btn btn-primary" onclick="searchFromConverter()">用這個顏色找相近油漆</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -252,6 +256,23 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260529d"></script>
+    <!-- 最近查詢彈窗 -->
+    <div class="modal-overlay" id="hist-modal" style="display:none;" onclick="closeHistory(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>最近查詢</h3>
+                <button class="modal-close" onclick="closeHistory(event)">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="hist-list" id="hist-list"></div>
+                <p id="hist-empty" class="fav-empty">尚無查詢紀錄。查詢任一色號後會自動記錄,方便快速重查。</p>
+                <div class="hist-footer">
+                    <button class="btn btn-secondary" onclick="clearHistory()">清除紀錄</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js?v=20260529e"></script>
 </body>
 </html>
