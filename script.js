@@ -23,10 +23,7 @@ function initializeApp() {
     
     // 設定標籤切換
     setupTabs();
-    
-    // 設定檔案上傳
-    setupFileUpload();
-    
+
     // 設定色碼轉換
     setupColorConversion();
 }
@@ -93,17 +90,6 @@ function setupTabs() {
             });
         });
     });
-}
-
-// 設定檔案上傳
-function setupFileUpload() {
-    const uploadBox = document.getElementById('upload-box');
-    const fileInput = document.getElementById('file-input');
-    
-    uploadBox.addEventListener('click', () => fileInput.click());
-    uploadBox.addEventListener('dragover', handleDragOver);
-    uploadBox.addEventListener('drop', handleFileDrop);
-    fileInput.addEventListener('change', handleFileSelect);
 }
 
 // 設定色碼轉換
@@ -315,93 +301,6 @@ function runComparison() {
 // 切換「只看市售油漆」時重新比對 (由 checkbox onchange 呼叫)
 function rerenderResults() {
     if (lastQuery) runComparison();
-}
-
-// 檔案上傳處理
-function handleDragOver(e) {
-    e.preventDefault();
-    e.currentTarget.style.borderColor = '#000';
-    e.currentTarget.style.background = '#f8f9fa';
-}
-
-function handleFileDrop(e) {
-    e.preventDefault();
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-        processFile(files[0]);
-    }
-    e.currentTarget.style.borderColor = '#e5e5e5';
-    e.currentTarget.style.background = '#fff';
-}
-
-function handleFileSelect(e) {
-    const files = e.target.files;
-    if (files.length > 0) {
-        processFile(files[0]);
-    }
-}
-
-function processFile(file) {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            let parsed;
-            if (file.name.endsWith('.json')) {
-                parsed = JSON.parse(e.target.result);
-            } else if (file.name.endsWith('.csv')) {
-                parsed = parseCSV(e.target.result);
-            } else {
-                showNotification('僅支援 CSV 或 JSON 檔案', 'error');
-                return;
-            }
-
-            // 支援純陣列或 {colors:[...]} 兩種格式
-            const rows = Array.isArray(parsed) ? parsed : (parsed && parsed.colors) || [];
-            const data = normalizeUploadedColors(rows);
-
-            if (data.length > 0) {
-                // 移除前一次上傳的自有色卡,避免重複累積
-                colorDatabase = colorDatabase.filter(c => c.brand_id !== 'custom').concat(data);
-                showNotification(`成功載入 ${data.length} 筆自有色卡,已可在比對中使用`, 'success');
-            } else {
-                showNotification('未解析到有效色號(每筆需含 hex 或 rgb 欄位)', 'error');
-            }
-        } catch (error) {
-            showNotification('檔案格式錯誤,無法解析', 'error');
-        }
-    };
-    reader.readAsText(file);
-}
-
-// 把上傳的原始資料正規化成內部色號物件:補齊 rgb/hex/lab/cmyk,過濾無效列
-function normalizeUploadedColors(rows) {
-    const out = [];
-    if (!Array.isArray(rows)) return out;
-    rows.forEach(row => {
-        if (!row || typeof row !== 'object') return;
-        let rgb = null;
-        if (Array.isArray(row.rgb) && row.rgb.length >= 3) {
-            rgb = row.rgb.map(Number);
-        } else if (typeof row.rgb === 'string') {
-            rgb = parseRGB(row.rgb);
-        }
-        let hex = (typeof row.hex === 'string' && row.hex.trim()) ? row.hex.trim() : null;
-        if (!rgb && hex) rgb = hexToRgb(hex);
-        if (!rgb || rgb.some(v => !Number.isFinite(v) || v < 0 || v > 255)) return; // 跳過無效列
-        if (!hex) hex = rgbToHex(rgb);
-        out.push({
-            brand: row.brand || '我的色卡',
-            brand_id: 'custom',
-            code: String(row.code || row.name || hex),
-            name: row.name || '',
-            hex: hex,
-            rgb: rgb,
-            lab: (Array.isArray(row.lab) && row.lab.length >= 3) ? row.lab.map(Number) : rgbToLab(rgb),
-            cmyk: (Array.isArray(row.cmyk) && row.cmyk.length >= 4) ? row.cmyk.map(Number) : rgbToCmyk(rgb),
-            category: 'custom'
-        });
-    });
-    return out;
 }
 
 // 色碼轉換功能
@@ -678,8 +577,7 @@ function renderCard(color, opts = {}) {
     // 類型標示:市售油漆 vs 色彩標準
     const catTag = color.category === 'paint'
         ? '<span class="cat-tag cat-paint">市售油漆</span>'
-        : (color.category === 'standard' ? '<span class="cat-tag cat-standard">色彩標準</span>'
-        : (color.category === 'custom' ? '<span class="cat-tag cat-custom">自有色卡</span>' : ''));
+        : (color.category === 'standard' ? '<span class="cat-tag cat-standard">色彩標準</span>' : '');
     // 收藏按鈕需要的精簡 color 物件
     const slim = {
         brand: color.brand, brand_id: color.brand_id, code: color.code,
@@ -782,25 +680,6 @@ function parseCMYK(cmykStr) {
 function parseLAB(labStr) {
     const match = labStr.match(/(-?\d+),\s*(-?\d+),\s*(-?\d+)/);
     return match ? [parseInt(match[1]), parseInt(match[2]), parseInt(match[3])] : null;
-}
-
-function parseCSV(csvText) {
-    const lines = csvText.split('\n');
-    const headers = lines[0].split(',');
-    const data = [];
-    
-    for (let i = 1; i < lines.length; i++) {
-        if (lines[i].trim()) {
-            const values = lines[i].split(',');
-            const obj = {};
-            headers.forEach((header, index) => {
-                obj[header.trim()] = values[index] ? values[index].trim() : '';
-            });
-            data.push(obj);
-        }
-    }
-    
-    return data;
 }
 
 // 通知系統
