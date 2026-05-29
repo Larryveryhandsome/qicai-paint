@@ -6,11 +6,14 @@ let brandCategoryById = {};    // 內部 id → category (paint / standard)
 let brandPriceQueryById = {};  // 內部 id → 比價搜尋關鍵字 (僅 paint 品牌有)
 let currentResults = [];
 let lastQuery = null;          // 記住最近一次查詢,供切換「只看油漆」時重算
+let colorsReady = false;       // colors.json 是否已載入完成
+let colorsPromise = null;      // 進行中的載入 Promise (避免重複抓)
 
 // 初始化
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
-    loadBrandsThenColors();
+    loadBrands();          // 品牌清單小,首頁就載
+    setupColorsPrefetch(); // 色號大檔延遲到接近查詢時才抓
 });
 
 // 初始化應用程式
@@ -35,13 +38,37 @@ function setupNavigation() {
         link.addEventListener('click', function(e) {
             e.preventDefault();
             const targetId = this.getAttribute('href').substring(1);
-            scrollToSection(targetId);
-            
-            // 更新活動狀態
-            navLinks.forEach(l => l.classList.remove('active'));
-            this.classList.add('active');
+            if (targetId) {
+                scrollToSection(targetId);
+                // 更新活動狀態 (收藏/最近 href="#" 不改變,避免亂標)
+                navLinks.forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+            }
+            closeNav(); // 點任一項就收起手機選單
         });
     });
+}
+
+// 手機版漢堡選單開合 (桌機 .nav-toggle 隱藏)
+function toggleNav() {
+    const links = document.getElementById('nav-links');
+    const btn = document.getElementById('nav-toggle');
+    if (!links) return;
+    const open = links.classList.toggle('open');
+    if (btn) {
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        btn.textContent = open ? '✕' : '☰';
+    }
+}
+
+function closeNav() {
+    const links = document.getElementById('nav-links');
+    const btn = document.getElementById('nav-toggle');
+    if (links) links.classList.remove('open');
+    if (btn) {
+        btn.setAttribute('aria-expanded', 'false');
+        btn.textContent = '☰';
+    }
 }
 
 // 設定標籤切換
@@ -93,8 +120,8 @@ function setupColorConversion() {
     labInput.addEventListener('input', () => convertFromLAB(labInput.value));
 }
 
-// 載入 brands.json 與 colors.json (依序),失敗時不使用假資料
-async function loadBrandsThenColors() {
+// 載入 brands.json (小檔,首頁就需要 — 填下拉選單與「支援品牌」格)
+async function loadBrands() {
     try {
         const brandsRes = await fetch('brands.json', { cache: 'no-cache' });
         if (!brandsRes.ok) throw new Error('brands.json HTTP ' + brandsRes.status);
@@ -108,25 +135,60 @@ async function loadBrandsThenColors() {
         showNotification('品牌清單載入失敗', 'error');
         brandsCatalog = [];
     }
+}
 
-    try {
-        const colorsRes = await fetch('colors.json', { cache: 'no-cache' });
-        if (!colorsRes.ok) throw new Error('colors.json HTTP ' + colorsRes.status);
-        const payload = await colorsRes.json();
-        // 支援兩種格式: 純陣列 (舊) 或 {colors: [...]} (新 schema_version 2.0)
-        colorDatabase = Array.isArray(payload) ? payload : (payload.colors || []);
-        // 把 brand_id 對應回 brand 顯示名稱;若 lab/cmyk 缺漏則補上
-        colorDatabase.forEach(c => {
-            if (!c.brand && c.brand_id) c.brand = brandsByCode[c.brand_id] || c.brand_id;
-            if (!c.category) c.category = brandCategoryById[c.brand_id] || 'other';
-            if (!c.lab && c.rgb) c.lab = rgbToLab(c.rgb);
-            if (!c.cmyk && c.rgb) c.cmyk = rgbToCmyk(c.rgb);
-        });
-        console.log(`已載入 ${colorDatabase.length} 筆色號資料`);
-    } catch (err) {
-        console.error('載入 colors.json 失敗', err);
-        showNotification('色號資料載入失敗,請稍後再試', 'error');
-        colorDatabase = [];
+// 延遲載入 colors.json (~512KB):首頁不需要,首次查詢或捲到查詢區才抓。
+// 可重入(多次呼叫只抓一次);失敗時清掉 promise 以便重試。
+function ensureColors() {
+    if (colorsReady) return Promise.resolve();
+    if (colorsPromise) return colorsPromise;
+    colorsPromise = (async () => {
+        try {
+            const colorsRes = await fetch('colors.json', { cache: 'no-cache' });
+            if (!colorsRes.ok) throw new Error('colors.json HTTP ' + colorsRes.status);
+            const payload = await colorsRes.json();
+            // 支援兩種格式: 純陣列 (舊) 或 {colors: [...]} (新 schema_version 2.0)
+            colorDatabase = Array.isArray(payload) ? payload : (payload.colors || []);
+            // 把 brand_id 對應回 brand 顯示名稱;若 lab/cmyk 缺漏則補上
+            colorDatabase.forEach(c => {
+                if (!c.brand && c.brand_id) c.brand = brandsByCode[c.brand_id] || c.brand_id;
+                if (!c.category) c.category = brandCategoryById[c.brand_id] || 'other';
+                if (!c.lab && c.rgb) c.lab = rgbToLab(c.rgb);
+                if (!c.cmyk && c.rgb) c.cmyk = rgbToCmyk(c.rgb);
+            });
+            colorsReady = true;
+            console.log(`已載入 ${colorDatabase.length} 筆色號資料`);
+        } catch (err) {
+            console.error('載入 colors.json 失敗', err);
+            showNotification('色號資料載入失敗,請稍後再試', 'error');
+            colorDatabase = [];
+            colorsPromise = null; // 允許重試
+        }
+    })();
+    return colorsPromise;
+}
+
+// 確保色號就緒後再執行查詢:未就緒時提示「載入中」,載完自動接續
+function withColors(fn) {
+    if (colorsReady) { fn(); return; }
+    showNotification('色號資料載入中,完成後自動查詢…', 'info');
+    ensureColors().then(() => { if (colorsReady) fn(); });
+}
+
+// 預抓:聚焦查詢輸入、或查詢區進入視窗時就先載色號,讓使用者按下查詢前通常已就緒
+function setupColorsPrefetch() {
+    ['brand-select', 'color-code', 'hex-input', 'rgb-input'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('focus', () => ensureColors(), { once: true });
+    });
+    const search = document.getElementById('search');
+    if (search && 'IntersectionObserver' in window) {
+        const io = new IntersectionObserver((entries) => {
+            if (entries.some(e => e.isIntersecting)) { ensureColors(); io.disconnect(); }
+        }, { rootMargin: '200px' });
+        io.observe(search);
+    } else {
+        ensureColors(); // 不支援 IO 時退回直接載入
     }
 }
 
@@ -163,10 +225,7 @@ function searchByCode() {
         return;
     }
 
-    if (!colorDatabase.length) {
-        showNotification('色號資料尚未載入完成,請稍候或重新整理頁面', 'warning');
-        return;
-    }
+    if (!colorsReady) { withColors(searchByCode); return; }
 
     const brandName = getBrandName(brand);
     const codeLower = code.toLowerCase();
@@ -201,11 +260,6 @@ function searchByColor() {
         return;
     }
 
-    if (!colorDatabase.length) {
-        showNotification('色號資料尚未載入完成,請稍候或重新整理頁面', 'warning');
-        return;
-    }
-
     let targetColor;
     if (hex) {
         targetColor = hexToRgb(hex);
@@ -227,10 +281,7 @@ function runColorSearch(targetColor) {
         showNotification('色碼格式錯誤', 'error');
         return;
     }
-    if (!colorDatabase.length) {
-        showNotification('色號資料尚未載入完成,請稍候或重新整理頁面', 'warning');
-        return;
-    }
+    if (!colorsReady) { withColors(() => runColorSearch(targetColor)); return; }
 
     const hex = rgbToHex(targetColor);
     // 建立虛擬色號物件 (查詢色不顯示為來源卡片)
@@ -1038,6 +1089,7 @@ function replayHistory(idx) {
     const hist = loadHistory();
     const h = hist[idx];
     if (!h) return;
+    if (!colorsReady) { withColors(() => replayHistory(idx)); return; }
     closeHistory();
 
     if (h.kind === 'color') {
@@ -1047,10 +1099,6 @@ function replayHistory(idx) {
         return;
     }
     // 品牌色號:回色庫找出來源色
-    if (!colorDatabase.length) {
-        showNotification('色號資料尚未載入完成,請稍候', 'warning');
-        return;
-    }
     const seed = colorDatabase.find(c =>
         (c.brand_id === h.brand_id || c.brand === h.brand) && String(c.code) === String(h.code));
     if (!seed) {
@@ -1089,6 +1137,21 @@ function setupKeyboardShortcuts() {
     onEnter('hex-input', searchByColor);
     onEnter('rgb-input', searchByColor);
     onEnter('store-location', searchStores);
+
+    // 無障礙:Esc 關閉彈窗/選單;結果色塊用 Enter/空白鍵也能上牆
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const fav = document.getElementById('fav-modal');
+            const hist = document.getElementById('hist-modal');
+            if (fav && fav.style.display !== 'none') closeFavorites();
+            if (hist && hist.style.display !== 'none') closeHistory();
+            closeNav();
+        } else if ((e.key === 'Enter' || e.key === ' ') &&
+                   e.target && e.target.classList && e.target.classList.contains('color-preview-small')) {
+            e.preventDefault();
+            e.target.click(); // 觸發 inline 的 previewOnWall
+        }
+    });
 }
 
 // 頁面載入時初始化收藏 / 歷史數量與鍵盤快捷鍵
