@@ -3,6 +3,7 @@ let colorDatabase = [];
 let brandsCatalog = [];       // 從 brands.json 載入
 let brandsByCode = {};         // 內部 id → 顯示名
 let brandCategoryById = {};    // 內部 id → category (paint / standard)
+let brandPriceQueryById = {};  // 內部 id → 比價搜尋關鍵字 (僅 paint 品牌有)
 let currentResults = [];
 let lastQuery = null;          // 記住最近一次查詢,供切換「只看油漆」時重算
 
@@ -100,6 +101,7 @@ async function loadBrandsThenColors() {
         brandsCatalog = await brandsRes.json();
         brandsByCode = Object.fromEntries(brandsCatalog.map(b => [b.id, b.name]));
         brandCategoryById = Object.fromEntries(brandsCatalog.map(b => [b.id, b.category || 'other']));
+        brandPriceQueryById = Object.fromEntries(brandsCatalog.filter(b => b.price_query).map(b => [b.id, b.price_query]));
         populateBrandUI();
     } catch (err) {
         console.error('載入 brands.json 失敗', err);
@@ -610,6 +612,13 @@ function renderCard(color, opts = {}) {
     }
     // 市價 (Phase 2:資料若含 price 欄位才顯示)
     const priceLine = color.price ? `<p class="price-line">參考價: ${escapeHtml(color.price)}</p>` : '';
+    // 比價連結 (僅市售油漆;油漆價格綁「品牌×產品線×容量」而非單一色號,故導向品牌層級的即時比價)
+    let priceLink = '';
+    if (color.category === 'paint') {
+        const q = brandPriceQueryById[color.brand_id] || (String(color.brand || '').split(/\s+/)[0] + ' 乳膠漆');
+        const url = 'https://www.google.com/search?tbm=shop&q=' + encodeURIComponent(q);
+        priceLink = `<a class="price-link" href="${url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">查市價 / 比價 →</a>`;
+    }
     // 類型標示:市售油漆 vs 色彩標準
     const catTag = color.category === 'paint'
         ? '<span class="cat-tag cat-paint">市售油漆</span>'
@@ -634,6 +643,7 @@ function renderCard(color, opts = {}) {
                 <p>CMYK: ${cmyk.join(', ')}</p>
                 ${priceLine}
                 ${badge}
+                ${priceLink}
             </div>
         </div>`;
 }

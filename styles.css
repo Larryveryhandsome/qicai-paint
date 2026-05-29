@@ -1014,3 +1014,22 @@ body {
 @media (max-width: 768px) {
     .room-scene { width: 100%; max-width: 320px; height: 240px; }
 }
+
+/* 查市價 / 比價連結 (僅市售油漆卡;v=20260529g) */
+.price-link {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1c7c3e;
+    text-decoration: none;
+    border: 1px solid #cfe9d6;
+    background: #f1faf4;
+    padding: 5px 12px;
+    border-radius: 20px;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+.price-link:hover {
+    background: #e3f4e8;
+    border-color: #1c7c3e;
+}
