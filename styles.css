@@ -305,29 +305,6 @@ body {
     border-color: #000;
 }
 
-/* 上傳區域 */
-.upload-area {
-    text-align: center;
-}
-
-.upload-box {
-    border: 2px dashed #e5e5e5;
-    border-radius: 12px;
-    padding: 60px 40px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.upload-box:hover {
-    border-color: #000;
-    background: #f8f9fa;
-}
-
-.upload-icon {
-    font-size: 48px;
-    margin-bottom: 16px;
-}
-
 /* 結果區域 */
 .results-container {
     margin-top: 60px;
@@ -897,12 +874,6 @@ body {
 }
 .hist-count.has-items {
     display: inline-block;
-}
-
-/* 自有色卡標籤 */
-.cat-custom {
-    background: #e7eefc;
-    color: #2b5bd7;
 }
 
 /* 色碼轉換 → 查詢的橋接按鈕 */

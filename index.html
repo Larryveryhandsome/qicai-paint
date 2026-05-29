@@ -20,7 +20,7 @@
     <meta name="twitter:description" content="輸入色號或 HEX,即查到所有品牌的相近色號。為業主與承包商打造。">
     <meta name="twitter:image" content="https://paint.zengzhisui.com/%E5%BD%A2%E8%B1%A1/%E6%BC%86%E5%BD%A9LOGO.png">
 
-    <link rel="stylesheet" href="styles.css?v=20260529i">
+    <link rel="stylesheet" href="styles.css?v=20260529j">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="icon" type="image/png" href="形象/漆彩LOGO.png">
 </head>
@@ -80,7 +80,6 @@
                     <div class="search-tabs">
                         <button class="tab-btn active" data-tab="code">依品牌色號查</button>
                         <button class="tab-btn" data-tab="color">依 HEX / RGB 查</button>
-                        <button class="tab-btn" data-tab="upload">上傳自有色卡</button>
                     </div>
                     
                     <div class="tab-content active" id="code-tab">
@@ -112,16 +111,6 @@
                             <button class="btn btn-primary" onclick="searchByColor()">查詢</button>
                         </div>
                     </div>
-                    
-                    <div class="tab-content" id="upload-tab">
-                        <div class="upload-area">
-                            <div class="upload-box" id="upload-box">
-                                <div class="upload-icon">📁</div>
-                                <p>拖拽 CSV 或 JSON 檔案到此處，或點擊選擇檔案</p>
-                                <input type="file" id="file-input" accept=".csv,.json" style="display: none;">
-                            </div>
-                        </div>
-                    </div>
                 </div>
                 
                 <div class="results-container" id="results-container" style="display: none;">
@@ -134,8 +123,9 @@
                         <span class="result-count" id="result-count"></span>
                     </div>
                     <div class="results-grid" id="results-grid"></div>
-                    <!-- 廣告版位 (Phase 2 預留,實際廣告主之後接入) -->
-                    <div class="ad-slot" data-slot="result-bottom" aria-hidden="true">
+                    <!-- 廣告版位掛勾:預留結構,有真廣告主再把 display 打開或由 JS 填入。
+                         空版位不顯示給使用者(避免看起來像半成品)。 -->
+                    <div class="ad-slot" data-slot="result-bottom" aria-hidden="true" style="display:none;">
                         <span class="ad-label">廣告版位</span>
                     </div>
                 </div>
@@ -224,7 +214,6 @@
                         <ul>
                             <li>跨品牌相近色比對（採用 CIEDE2000 色差演算法，ΔE &lt; 10 推薦）</li>
                             <li>HEX / RGB / CMYK / LAB 即時互轉</li>
-                            <li>自有色卡資料上傳（CSV / JSON）</li>
                             <li>結果顯示完整 RGB 與 CMYK 數值，方便印刷與調色</li>
                             <li>市售油漆可一鍵「查市價／比價」，導向即時比價結果</li>
                         </ul>
@@ -295,6 +284,6 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260529i"></script>
+    <script src="script.js?v=20260529j"></script>
 </body>
 </html>
