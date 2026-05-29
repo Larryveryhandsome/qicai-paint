@@ -625,7 +625,7 @@ function renderCard(color, opts = {}) {
     return `
         <div class="result-card fade-in${color.isSeed ? ' is-seed' : ''}">
             <button class="fav-btn ${fav ? 'is-fav' : ''}" data-color="${dataColor}" onclick="toggleFavorite(this)" title="加入/移除收藏" aria-label="收藏">${fav ? '★' : '☆'}</button>
-            <div class="color-preview-small" style="background-color: ${safeHex};"></div>
+            <div class="color-preview-small" style="background-color: ${safeHex};" onclick="previewOnWall('${safeHex}')" title="點擊在牆面預覽此色" role="button" tabindex="0"></div>
             <div class="result-info">
                 <h4>${nameLine} ${catTag}</h4>
                 <p>色號: ${escapeHtml(color.code)}</p>
@@ -668,13 +668,23 @@ function updateConversionInputs(hex, rgb, cmyk, lab) {
     document.getElementById('convert-lab').value = lab.join(', ');
 }
 
-// 更新色彩預覽
+// 更新色彩預覽 (牆面模擬:#color-preview 即牆面)
 function updateColorPreview(hex) {
     const preview = document.getElementById('color-preview');
     const text = document.getElementById('preview-text');
-    
-    preview.style.backgroundColor = hex;
-    text.textContent = hex;
+
+    if (preview) preview.style.backgroundColor = hex;
+    if (text) text.textContent = hex;
+}
+
+// 點查詢結果色塊 → 套到色碼轉換的牆面模擬,並捲動到該區
+function previewOnWall(hex) {
+    if (!hex) return;
+    const input = document.getElementById('convert-hex');
+    if (input) input.value = hex;
+    convertFromHex(hex);       // 同步 RGB/CMYK/LAB (標準 6 碼時)
+    updateColorPreview(hex);   // 確保牆面一定上色 (含 8 碼/簡碼)
+    scrollToSection('convert');
 }
 
 // 工具函數 — 從 brands.json 動態查 (替代寫死的對應表)

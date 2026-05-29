@@ -6,7 +6,7 @@
     <title>漆彩 — 跨品牌油漆色號對照工具</title>
     <meta name="description" content="輸入任何品牌的油漆色號或 HEX,即查到其他品牌的相近色號。為業主與承包商打造的跨品牌色彩對照工具。">
     <meta name="theme-color" content="#000000">
-    <link rel="stylesheet" href="styles.css?v=20260529e">
+    <link rel="stylesheet" href="styles.css?v=20260529f">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="icon" type="image/png" href="形象/漆彩LOGO.png">
 </head>
@@ -153,10 +153,16 @@
                         </div>
                     </div>
                     <div class="color-preview">
-                        <div class="preview-box" id="color-preview"></div>
+                        <div class="room-scene" aria-hidden="true">
+                            <div class="room-wall" id="color-preview">
+                                <span class="room-window"></span>
+                            </div>
+                            <div class="room-floor"></div>
+                            <div class="room-sofa"></div>
+                        </div>
                         <div class="preview-info">
-                            <p>色彩預覽</p>
-                            <p id="preview-text">請輸入色碼</p>
+                            <p>牆面模擬預覽</p>
+                            <p id="preview-text">請輸入色碼，或點查詢結果的色塊試擺上牆</p>
                         </div>
                         <div class="convert-actions">
                             <button class="btn btn-primary" onclick="searchFromConverter()">用這個顏色找相近油漆</button>
@@ -273,6 +279,6 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260529e"></script>
+    <script src="script.js?v=20260529f"></script>
 </body>
 </html>
