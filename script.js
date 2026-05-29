@@ -824,8 +824,10 @@ function renderFavorites() {
 
 function updateStoresMap(query) {
     const iframe = document.getElementById('stores-map');
-    if (!iframe) return;
-    iframe.src = `https://maps.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
+    if (iframe) iframe.src = `https://maps.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
+    // 同步更新後備連結:即使 iframe embed 被 Google 擋,使用者仍可點此開啟
+    const link = document.getElementById('stores-link');
+    if (link) link.href = `https://www.google.com/maps/search/${encodeURIComponent(query)}`;
 }
 
 function searchStores() {
@@ -848,7 +850,9 @@ function useMyLocation() {
             const { latitude, longitude } = pos.coords;
             const iframe = document.getElementById('stores-map');
             // 以座標為中心搜尋油漆行
-            iframe.src = `https://maps.google.com/maps?q=%E6%B2%B9%E6%BC%86%E8%A1%8C/@${latitude},${longitude},14z&output=embed`;
+            if (iframe) iframe.src = `https://maps.google.com/maps?q=%E6%B2%B9%E6%BC%86%E8%A1%8C/@${latitude},${longitude},14z&output=embed`;
+            const link = document.getElementById('stores-link');
+            if (link) link.href = `https://www.google.com/maps/search/%E6%B2%B9%E6%BC%86%E8%A1%8C/@${latitude},${longitude},14z`;
             showNotification('已定位,顯示附近油漆行', 'success');
         },
         () => showNotification('無法取得位置,請手動輸入地區', 'error'),
