@@ -161,13 +161,18 @@ function searchByCode() {
         return;
     }
 
+    if (!colorDatabase.length) {
+        showNotification('色號資料尚未載入完成,請稍候或重新整理頁面', 'warning');
+        return;
+    }
+
     const brandName = getBrandName(brand);
     const codeLower = code.toLowerCase();
 
-    // 精準命中 (品牌一致 且 色號完全相符或包含)
+    // 精準命中 (品牌一致 且 色號完全相符或包含);String() 防色號為數字時崩潰
     const matches = colorDatabase.filter(color =>
         color.brand === brandName &&
-        color.code.toLowerCase().includes(codeLower)
+        String(color.code || '').toLowerCase().includes(codeLower)
     );
 
     if (matches.length === 0) {
@@ -193,7 +198,12 @@ function searchByColor() {
         showNotification('請輸入HEX或RGB色碼', 'error');
         return;
     }
-    
+
+    if (!colorDatabase.length) {
+        showNotification('色號資料尚未載入完成,請稍候或重新整理頁面', 'warning');
+        return;
+    }
+
     let targetColor;
     if (hex) {
         targetColor = hexToRgb(hex);
@@ -360,12 +370,14 @@ function rgbToHex(rgb) {
 }
 
 function rgbToCmyk(rgb) {
+    if (!Array.isArray(rgb) || rgb.length < 3) return [0, 0, 0, 0];
     const [r, g, b] = rgb.map(x => x / 255);
     const k = 1 - Math.max(r, g, b);
+    if (k >= 1) return [0, 0, 0, 100]; // 純黑:避免除以零造成 NaN
     const c = (1 - r - k) / (1 - k);
     const m = (1 - g - k) / (1 - k);
     const y = (1 - b - k) / (1 - k);
-    
+
     return [
         Math.round(c * 100),
         Math.round(m * 100),
@@ -389,6 +401,7 @@ function cmykToRgb(cmyk) {
 
 function rgbToLab(rgb) {
     // 簡化的RGB到LAB轉換
+    if (!Array.isArray(rgb) || rgb.length < 3) return [0, 0, 0];
     const [r, g, b] = rgb.map(x => x / 255);
     
     // 轉換到XYZ
@@ -492,14 +505,17 @@ function ciede2000(lab1, lab2) {
 // 尋找相似顏色 (回傳前 N 個)
 function findSimilarColors(targetColor, database, threshold = 10, limit = 30) {
     const similarColors = [];
+    // 來源色若無有效 lab,無法比對
+    if (!targetColor || !Array.isArray(targetColor.lab)) return similarColors;
 
     database.forEach(color => {
+        if (!Array.isArray(color.lab)) return; // 跳過缺 lab 的壞資料,不拖垮整批
         if (color.code === targetColor.code && color.brand === targetColor.brand) {
             return; // 跳過相同顏色
         }
 
         const deltaE = ciede2000(targetColor.lab, color.lab);
-        if (deltaE <= threshold) {
+        if (Number.isFinite(deltaE) && deltaE <= threshold) {
             similarColors.push({
                 ...color,
                 similarity: deltaE
@@ -513,8 +529,17 @@ function findSimilarColors(targetColor, database, threshold = 10, limit = 30) {
 
 // 產生單張色卡 HTML (結果區與收藏彈窗共用)
 function renderCard(color, opts = {}) {
-    const cmyk = color.cmyk || rgbToCmyk(color.rgb);
-    const nameLine = color.name ? `${color.brand} · ${color.name}` : color.brand;
+    // 安全處理 rgb / hex(防缺欄位或惡意上傳資料)
+    const rgb = (Array.isArray(color.rgb) && color.rgb.length >= 3)
+        ? color.rgb
+        : (hexToRgb(color.hex || '') || [0, 0, 0]);
+    const cmyk = Array.isArray(color.cmyk) ? color.cmyk : rgbToCmyk(rgb);
+    // hex 會放進 style,只允許合法色碼,否則用安全預設(防 CSS injection)
+    const safeHex = /^#?[0-9A-Fa-f]{3,8}$/.test(String(color.hex || '')) ? color.hex : '#cccccc';
+
+    // 所有顯示文字一律跳脫
+    const eBrand = escapeHtml(color.brand);
+    const nameLine = color.name ? `${eBrand} · ${escapeHtml(color.name)}` : eBrand;
     const fav = isFavorite(color);
     let badge = '';
     if (!opts.hideBadge) {
@@ -523,7 +548,7 @@ function renderCard(color, opts = {}) {
             : (typeof color.similarity === 'number' ? `<span class="similarity-score">ΔE ${color.similarity.toFixed(2)}</span>` : '');
     }
     // 市價 (Phase 2:資料若含 price 欄位才顯示)
-    const priceLine = color.price ? `<p class="price-line">參考價: ${color.price}</p>` : '';
+    const priceLine = color.price ? `<p class="price-line">參考價: ${escapeHtml(color.price)}</p>` : '';
     // 類型標示:市售油漆 vs 色彩標準
     const catTag = color.category === 'paint'
         ? '<span class="cat-tag cat-paint">市售油漆</span>'
@@ -531,19 +556,19 @@ function renderCard(color, opts = {}) {
     // 收藏按鈕需要的精簡 color 物件
     const slim = {
         brand: color.brand, brand_id: color.brand_id, code: color.code,
-        name: color.name || '', hex: color.hex, rgb: color.rgb, cmyk: cmyk, lab: color.lab,
+        name: color.name || '', hex: color.hex, rgb: rgb, cmyk: cmyk, lab: color.lab,
         category: color.category || 'other', price: color.price || null
     };
     const dataColor = encodeURIComponent(JSON.stringify(slim));
     return `
         <div class="result-card fade-in${color.isSeed ? ' is-seed' : ''}">
             <button class="fav-btn ${fav ? 'is-fav' : ''}" data-color="${dataColor}" onclick="toggleFavorite(this)" title="加入/移除收藏" aria-label="收藏">${fav ? '★' : '☆'}</button>
-            <div class="color-preview-small" style="background-color: ${color.hex};"></div>
+            <div class="color-preview-small" style="background-color: ${safeHex};"></div>
             <div class="result-info">
                 <h4>${nameLine} ${catTag}</h4>
-                <p>色號: ${color.code}</p>
-                <p>HEX: ${color.hex}</p>
-                <p>RGB: ${color.rgb.join(', ')}</p>
+                <p>色號: ${escapeHtml(color.code)}</p>
+                <p>HEX: ${escapeHtml(color.hex)}</p>
+                <p>RGB: ${rgb.join(', ')}</p>
                 <p>CMYK: ${cmyk.join(', ')}</p>
                 ${priceLine}
                 ${badge}
@@ -593,6 +618,13 @@ function updateColorPreview(hex) {
 // 工具函數 — 從 brands.json 動態查 (替代寫死的對應表)
 function getBrandName(brandCode) {
     return brandsByCode[brandCode] || brandCode;
+}
+
+// HTML 跳脫:防止上傳色卡的資料注入 HTML/破壞版面 (self-XSS)
+function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[m]));
 }
 
 function isValidHex(hex) {
@@ -717,7 +749,12 @@ function loadFavorites() {
 }
 
 function saveFavorites(list) {
-    localStorage.setItem(FAV_KEY, JSON.stringify(list));
+    try {
+        localStorage.setItem(FAV_KEY, JSON.stringify(list));
+    } catch (e) {
+        console.warn('收藏無法儲存(無痕模式或儲存空間已滿)', e);
+        showNotification('此瀏覽器無法儲存收藏(可能為無痕模式)', 'warning');
+    }
     updateFavCount();
 }
 
@@ -823,13 +860,16 @@ function useMyLocation() {
 
 function addHistory(color) {
     if (!color) return;
-    let hist = [];
-    try { hist = JSON.parse(localStorage.getItem(HIST_KEY)) || []; } catch {}
-    const key = colorKey(color);
-    hist = hist.filter(c => colorKey(c) !== key);
-    hist.unshift({ brand: color.brand, brand_id: color.brand_id, code: color.code, hex: color.hex, ts: Date.now() });
-    hist = hist.slice(0, 10);
-    localStorage.setItem(HIST_KEY, JSON.stringify(hist));
+    // 整段包 try-catch:無痕模式/配額滿時略過歷史,絕不影響查詢主流程
+    try {
+        let hist = JSON.parse(localStorage.getItem(HIST_KEY)) || [];
+        const key = colorKey(color);
+        hist = hist.filter(c => colorKey(c) !== key);
+        hist.unshift({ brand: color.brand, brand_id: color.brand_id, code: color.code, hex: color.hex, ts: Date.now() });
+        localStorage.setItem(HIST_KEY, JSON.stringify(hist.slice(0, 10)));
+    } catch (e) {
+        /* 略過歷史記錄 */
+    }
 }
 
 // 頁面載入時初始化收藏數量
