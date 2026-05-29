@@ -57,6 +57,7 @@
     "source": "colortell.com",
     "callbook": "a6",
     "official_url": "https://www.dulux.com.tw",
+    "price_query": "得利 乳膠漆",
     "count": 1654
   },
   {
@@ -67,6 +68,7 @@
     "source": "colortell.com",
     "callbook": "a7",
     "official_url": "https://www.dulux.com.tw",
+    "price_query": "得利 乳膠漆",
     "count": 1189
   },
   {
@@ -87,6 +89,7 @@
     "source": "colortell.com",
     "callbook": "a9",
     "official_url": "https://www.nipponpaint.com.tw",
+    "price_query": "立邦 乳膠漆",
     "count": 1881
   },
   {
@@ -97,6 +100,7 @@
     "source": "colortell.com",
     "callbook": "rainbow",
     "official_url": "https://www.rainbow-house.com.tw",
+    "price_query": "虹牌 乳膠漆",
     "count": 2207
   }
 ]
