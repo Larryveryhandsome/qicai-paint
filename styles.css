@@ -743,3 +743,55 @@ body {
     .stores-controls { flex-direction: column; }
     .stores-controls .btn { width: 100%; }
 }
+
+/* 結果篩選列 */
+.results-filter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    max-width: 100%;
+    margin: 0 auto 24px;
+    padding: 14px 18px;
+    background: #f8f9fa;
+    border-radius: 10px;
+}
+.filter-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+}
+.filter-toggle input {
+    width: 18px;
+    height: 18px;
+    accent-color: #000;
+    cursor: pointer;
+}
+.result-count {
+    color: #888;
+    font-size: 14px;
+}
+
+/* 類型標籤:市售油漆 / 色彩標準 */
+.cat-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    vertical-align: middle;
+    margin-left: 6px;
+    white-space: nowrap;
+}
+.cat-paint {
+    background: #e3f4e8;
+    color: #1c7c3e;
+}
+.cat-standard {
+    background: #eee;
+    color: #888;
+}

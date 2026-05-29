@@ -2,7 +2,9 @@
 let colorDatabase = [];
 let brandsCatalog = [];       // 從 brands.json 載入
 let brandsByCode = {};         // 內部 id → 顯示名
+let brandCategoryById = {};    // 內部 id → category (paint / standard)
 let currentResults = [];
+let lastQuery = null;          // 記住最近一次查詢,供切換「只看油漆」時重算
 
 // 初始化
 document.addEventListener('DOMContentLoaded', function() {
@@ -97,6 +99,7 @@ async function loadBrandsThenColors() {
         if (!brandsRes.ok) throw new Error('brands.json HTTP ' + brandsRes.status);
         brandsCatalog = await brandsRes.json();
         brandsByCode = Object.fromEntries(brandsCatalog.map(b => [b.id, b.name]));
+        brandCategoryById = Object.fromEntries(brandsCatalog.map(b => [b.id, b.category || 'other']));
         populateBrandUI();
     } catch (err) {
         console.error('載入 brands.json 失敗', err);
@@ -113,6 +116,7 @@ async function loadBrandsThenColors() {
         // 把 brand_id 對應回 brand 顯示名稱;若 lab/cmyk 缺漏則補上
         colorDatabase.forEach(c => {
             if (!c.brand && c.brand_id) c.brand = brandsByCode[c.brand_id] || c.brand_id;
+            if (!c.category) c.category = brandCategoryById[c.brand_id] || 'other';
             if (!c.lab && c.rgb) c.lab = rgbToLab(c.rgb);
             if (!c.cmyk && c.rgb) c.cmyk = rgbToCmyk(c.rgb);
         });
@@ -176,9 +180,8 @@ function searchByCode() {
     const seed = matches[0];
     showNotification(`已找到 ${brandName} ${seed.code},正在比對其他品牌...`, 'info');
     addHistory(seed);
-    const similar = findSimilarColors(seed, colorDatabase);
-    // 把 seed 自己也擺在最前面,方便對照
-    displayResults([{ ...seed, similarity: 0, isSeed: true }, ...similar]);
+    lastQuery = { seed, showSeed: true };
+    runComparison();
 }
 
 // 色碼查詢功能
@@ -217,9 +220,26 @@ function searchByColor() {
         url: "#"
     };
     
-    // 尋找相似顏色
-    const similarColors = findSimilarColors(virtualColor, colorDatabase);
-    displayResults(similarColors);
+    // 尋找相似顏色 (查詢色為虛擬色,不顯示為來源卡片)
+    lastQuery = { seed: virtualColor, showSeed: false };
+    runComparison();
+}
+
+// 依當前「只看市售油漆」設定,跑比對並顯示 (供查詢與切換共用)
+function runComparison() {
+    if (!lastQuery) return;
+    const paintOnly = document.getElementById('paint-only') && document.getElementById('paint-only').checked;
+    const pool = paintOnly ? colorDatabase.filter(c => c.category === 'paint') : colorDatabase;
+    const similar = findSimilarColors(lastQuery.seed, pool);
+    const list = lastQuery.showSeed
+        ? [{ ...lastQuery.seed, similarity: 0, isSeed: true }, ...similar]
+        : similar;
+    displayResults(list);
+}
+
+// 切換「只看市售油漆」時重新比對 (由 checkbox onchange 呼叫)
+function rerenderResults() {
+    if (lastQuery) runComparison();
 }
 
 // 檔案上傳處理
@@ -504,10 +524,15 @@ function renderCard(color, opts = {}) {
     }
     // 市價 (Phase 2:資料若含 price 欄位才顯示)
     const priceLine = color.price ? `<p class="price-line">參考價: ${color.price}</p>` : '';
+    // 類型標示:市售油漆 vs 色彩標準
+    const catTag = color.category === 'paint'
+        ? '<span class="cat-tag cat-paint">市售油漆</span>'
+        : (color.category === 'standard' ? '<span class="cat-tag cat-standard">色彩標準</span>' : '');
     // 收藏按鈕需要的精簡 color 物件
     const slim = {
         brand: color.brand, brand_id: color.brand_id, code: color.code,
-        name: color.name || '', hex: color.hex, rgb: color.rgb, cmyk: cmyk, lab: color.lab, price: color.price || null
+        name: color.name || '', hex: color.hex, rgb: color.rgb, cmyk: cmyk, lab: color.lab,
+        category: color.category || 'other', price: color.price || null
     };
     const dataColor = encodeURIComponent(JSON.stringify(slim));
     return `
@@ -515,7 +540,7 @@ function renderCard(color, opts = {}) {
             <button class="fav-btn ${fav ? 'is-fav' : ''}" data-color="${dataColor}" onclick="toggleFavorite(this)" title="加入/移除收藏" aria-label="收藏">${fav ? '★' : '☆'}</button>
             <div class="color-preview-small" style="background-color: ${color.hex};"></div>
             <div class="result-info">
-                <h4>${nameLine}</h4>
+                <h4>${nameLine} ${catTag}</h4>
                 <p>色號: ${color.code}</p>
                 <p>HEX: ${color.hex}</p>
                 <p>RGB: ${color.rgb.join(', ')}</p>
@@ -532,9 +557,16 @@ function displayResults(results) {
     const grid = document.getElementById('results-grid');
 
     if (!results || results.length === 0) {
-        grid.innerHTML = '<p style="text-align: center; color: #666;">未找到相似顏色</p>';
+        grid.innerHTML = '<p style="text-align: center; color: #666;">未找到相似顏色，可改用「只比對市售油漆」或放寬條件</p>';
     } else {
         grid.innerHTML = results.map(c => renderCard(c)).join('');
+    }
+
+    // 更新結果數 (不計查詢來源卡)
+    const countEl = document.getElementById('result-count');
+    if (countEl) {
+        const shown = results ? results.filter(r => !r.isSeed).length : 0;
+        countEl.textContent = shown > 0 ? `共 ${shown} 個相近色` : '';
     }
 
     container.style.display = 'block';
