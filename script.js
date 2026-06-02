@@ -182,8 +182,14 @@ function setupColorsPrefetch() {
 function populateBrandUI() {
     const select = document.getElementById('brand-select');
     if (select) {
-        select.innerHTML = '<option value="">請選擇品牌</option>'
-            + brandsCatalog.map(b => `<option value="${b.id}">${b.name}${b.name_en ? ' ' + b.name_en : ''}</option>`).join('');
+        // 分兩組:市售油漆 vs 色彩標準,讓業主一眼找到要的油漆品牌(不必在 PANTONE 裡翻)
+        const opt = b => `<option value="${b.id}">${b.name}${b.name_en ? ' ' + b.name_en : ''}</option>`;
+        const paint = brandsCatalog.filter(b => b.category === 'paint');
+        const other = brandsCatalog.filter(b => b.category !== 'paint');
+        let html = '<option value="">請選擇品牌</option>';
+        if (paint.length) html += `<optgroup label="市售油漆">${paint.map(opt).join('')}</optgroup>`;
+        if (other.length) html += `<optgroup label="色彩標準">${other.map(opt).join('')}</optgroup>`;
+        select.innerHTML = html;
     }
     const grid = document.getElementById('brands-grid');
     if (grid) {
@@ -585,6 +591,9 @@ function renderCard(color, opts = {}) {
         category: color.category || 'other', price: color.price || null
     };
     const dataColor = encodeURIComponent(JSON.stringify(slim));
+    // 一鍵複製:業主查到色後最常做的事 — 把「品牌 色號 + 色碼」傳給油漆行
+    const copyText = `${color.brand || ''} ${color.code || ''}　HEX ${color.hex || ''}　RGB ${rgb.join(',')}`.trim();
+    const dataCopy = encodeURIComponent(copyText);
     return `
         <div class="result-card fade-in${color.isSeed ? ' is-seed' : ''}">
             <button class="fav-btn ${fav ? 'is-fav' : ''}" data-color="${dataColor}" onclick="toggleFavorite(this)" title="加入/移除收藏" aria-label="收藏">${fav ? '★' : '☆'}</button>
@@ -597,9 +606,41 @@ function renderCard(color, opts = {}) {
                 <p>CMYK: ${cmyk.join(', ')}</p>
                 ${priceLine}
                 ${badge}
-                ${priceLink}
+                <div class="card-actions">
+                    <button class="copy-btn" data-copy="${dataCopy}" onclick="copyColor(this)" title="複製品牌色號與色碼,可貼給油漆行">⧉ 複製色號</button>
+                    ${priceLink}
+                </div>
             </div>
         </div>`;
+}
+
+// 一鍵複製色號到剪貼簿 (含 fallback,相容舊瀏覽器與非 HTTPS)
+function copyColor(btn) {
+    const text = decodeURIComponent(btn.dataset.copy || '');
+    if (!text) return;
+    const done = () => showNotification('已複製,可直接貼給油漆行', 'success');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+    } else {
+        fallbackCopy(text, done);
+    }
+}
+
+function fallbackCopy(text, done) {
+    try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.top = '-9999px';
+        ta.setAttribute('readonly', '');
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        done();
+    } catch (e) {
+        showNotification('複製失敗,請手動選取文字', 'error');
+    }
 }
 
 // 顯示結果
