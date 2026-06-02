@@ -20,7 +20,7 @@
     <meta name="twitter:description" content="輸入色號或 HEX,即查到所有品牌的相近色號。為業主與承包商打造。">
     <meta name="twitter:image" content="https://paint.zengzhisui.com/%E5%BD%A2%E8%B1%A1/%E6%BC%86%E5%BD%A9LOGO.png">
 
-    <link rel="stylesheet" href="styles.css?v=20260529k">
+    <link rel="stylesheet" href="styles.css?v=20260529l">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="icon" type="image/png" href="形象/漆彩LOGO.png">
 </head>
@@ -117,8 +117,8 @@
                     <h3>查詢結果</h3>
                     <div class="results-filter">
                         <label class="filter-toggle">
-                            <input type="checkbox" id="paint-only" onchange="rerenderResults()">
-                            <span class="filter-label-text">只比對市售油漆<span class="filter-hint">虹牌／立邦／得利</span></span>
+                            <input type="checkbox" id="paint-only" onchange="rerenderResults()" checked>
+                            <span class="filter-label-text">只比對市售油漆<span class="filter-hint">虹牌／立邦／得利;取消勾選可納入 PANTONE 等色票</span></span>
                         </label>
                         <span class="result-count" id="result-count"></span>
                     </div>
@@ -284,6 +284,6 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260529k"></script>
+    <script src="script.js?v=20260529l"></script>
 </body>
 </html>

@@ -649,7 +649,7 @@ function displayResults(results) {
     const grid = document.getElementById('results-grid');
 
     if (!results || results.length === 0) {
-        grid.innerHTML = '<p style="text-align: center; color: #666;">未找到相似顏色，可改用「只比對市售油漆」或放寬條件</p>';
+        grid.innerHTML = '<p style="text-align: center; color: #666;">未找到相似的市售油漆,可取消「只比對市售油漆」以納入 PANTONE 等更多色票</p>';
     } else {
         grid.innerHTML = results.map(c => renderCard(c)).join('');
     }
