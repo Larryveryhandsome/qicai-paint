@@ -902,6 +902,13 @@ function useMyLocation() {
         showNotification('此瀏覽器不支援定位,請手動輸入地區', 'warning');
         return;
     }
+    // 瀏覽器規定:定位只能在安全環境 (HTTPS) 使用。HTTP 下會直接被拒,
+    // 先給誠實提示,別讓使用者按了才看到「無法取得位置」。
+    // (localhost 雖是 http 但屬安全環境,isSecureContext 為 true,不受影響)
+    if (window.isSecureContext === false) {
+        showNotification('定位需在 https 安全連線下才能使用,請改用手動輸入地區', 'warning');
+        return;
+    }
     showNotification('正在取得你的位置...', 'info');
     navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -913,8 +920,13 @@ function useMyLocation() {
             if (link) link.href = `https://www.google.com/maps/search/%E6%B2%B9%E6%BC%86%E8%A1%8C/@${latitude},${longitude},14z`;
             showNotification('已定位,顯示附近油漆行', 'success');
         },
-        () => showNotification('無法取得位置,請手動輸入地區', 'error'),
-        { timeout: 8000 }
+        (err) => {
+            const msg = (err && err.code === 1)
+                ? '定位權限被拒,請改用手動輸入地區'
+                : '無法取得位置,請手動輸入地區';
+            showNotification(msg, 'error');
+        },
+        { timeout: 8000, maximumAge: 600000 }
     );
 }
 
