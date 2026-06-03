@@ -2,6 +2,13 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <script>
+        // 強制 HTTPS:定位等功能需安全連線(HTTPS),且對安全性與 SEO 都較好。
+        // 僅對正式網域生效;localhost / 其他環境不受影響。盡早執行以免載入後才轉址。
+        if (location.protocol === 'http:' && location.hostname.indexOf('zengzhisui.com') !== -1) {
+            location.replace('https://' + location.host + location.pathname + location.search + location.hash);
+        }
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>漆彩 — 跨品牌油漆色號對照工具</title>
     <meta name="description" content="輸入任何品牌的油漆色號或 HEX,即查到其他品牌的相近色號。為業主與承包商打造的跨品牌色彩對照工具。">
@@ -20,7 +27,7 @@
     <meta name="twitter:description" content="輸入色號或 HEX,即查到所有品牌的相近色號。為業主與承包商打造。">
     <meta name="twitter:image" content="https://paint.zengzhisui.com/%E5%BD%A2%E8%B1%A1/%E6%BC%86%E5%BD%A9LOGO.png">
 
-    <link rel="stylesheet" href="styles.css?v=20260529m">
+    <link rel="stylesheet" href="styles.css?v=20260529n">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="icon" type="image/png" href="形象/漆彩LOGO.png">
 </head>
@@ -284,6 +291,6 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260529m"></script>
+    <script src="script.js?v=20260529n"></script>
 </body>
 </html>
