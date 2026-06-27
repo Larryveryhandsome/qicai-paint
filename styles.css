@@ -380,15 +380,6 @@ body {
     text-align: center;
 }
 
-.preview-box {
-    width: 200px;
-    height: 200px;
-    border-radius: 16px;
-    margin: 0 auto 24px;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-    border: 1px solid #e5e5e5;
-}
-
 .preview-info p {
     color: #666;
     margin-bottom: 8px;
@@ -558,11 +549,6 @@ body {
     
     .color-palette {
         grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .preview-box {
-        width: 150px;
-        height: 150px;
     }
 }
 
