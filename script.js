@@ -4,7 +4,6 @@ let brandsCatalog = [];       // 從 brands.json 載入
 let brandsByCode = {};         // 內部 id → 顯示名
 let brandCategoryById = {};    // 內部 id → category (paint / standard)
 let brandPriceQueryById = {};  // 內部 id → 比價搜尋關鍵字 (僅 paint 品牌有)
-let currentResults = [];
 let lastQuery = null;          // 記住最近一次查詢,供切換「只看油漆」時重算
 let colorsReady = false;       // colors.json 是否已載入完成
 let colorsPromise = null;      // 進行中的載入 Promise (避免重複抓)
@@ -293,7 +292,7 @@ function runColorSearch(targetColor) {
 }
 
 // 依當前「只看市售油漆」設定,跑比對並顯示 (供查詢與切換共用)
-function runComparison() {
+function runComparison(opts) {
     if (!lastQuery) return;
     const paintOnly = document.getElementById('paint-only') && document.getElementById('paint-only').checked;
     const pool = paintOnly ? colorDatabase.filter(c => c.category === 'paint') : colorDatabase;
@@ -301,12 +300,12 @@ function runComparison() {
     const list = lastQuery.showSeed
         ? [{ ...lastQuery.seed, similarity: 0, isSeed: true }, ...similar]
         : similar;
-    displayResults(list);
+    displayResults(list, opts);
 }
 
-// 切換「只看市售油漆」時重新比對 (由 checkbox onchange 呼叫)
+// 切換「只看市售油漆」時重新比對 (由 checkbox onchange 呼叫);不捲動,免得點 checkbox 頁面跳走
 function rerenderResults() {
-    if (lastQuery) runComparison();
+    if (lastQuery) runComparison({ scroll: false });
 }
 
 // 色碼轉換功能
@@ -365,12 +364,13 @@ function convertFromLAB(labStr) {
 
 // 色彩空間轉換函數
 function hexToRgb(hex) {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? [
-        parseInt(result[1], 16),
-        parseInt(result[2], 16),
-        parseInt(result[3], 16)
-    ] : null;
+    let h = String(hex == null ? '' : hex).trim().replace(/^#/, '');
+    // 3 碼簡寫 (#abc → aabbcc)
+    if (/^[a-f\d]{3}$/i.test(h)) h = h.split('').map(c => c + c).join('');
+    // 8 碼帶 alpha:忽略 alpha,取前 6 碼
+    else if (/^[a-f\d]{8}$/i.test(h)) h = h.slice(0, 6);
+    if (!/^[a-f\d]{6}$/i.test(h)) return null;
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
 }
 
 function rgbToHex(rgb) {
@@ -643,8 +643,8 @@ function fallbackCopy(text, done) {
     }
 }
 
-// 顯示結果
-function displayResults(results) {
+// 顯示結果 (opts.scroll=false 時不捲動,供切換篩選用)
+function displayResults(results, opts = {}) {
     const container = document.getElementById('results-container');
     const grid = document.getElementById('results-grid');
 
@@ -662,7 +662,7 @@ function displayResults(results) {
     }
 
     container.style.display = 'block';
-    container.scrollIntoView({ behavior: 'smooth' });
+    if (opts.scroll !== false) container.scrollIntoView({ behavior: 'smooth' });
 }
 
 // 更新轉換輸入框
@@ -705,12 +705,15 @@ function escapeHtml(s) {
 }
 
 function isValidHex(hex) {
-    return /^#?([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(hex);
+    return /^#?([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$/.test(hex);
 }
 
 function parseRGB(rgbStr) {
     const match = rgbStr.match(/(\d+),\s*(\d+),\s*(\d+)/);
-    return match ? [parseInt(match[1]), parseInt(match[2]), parseInt(match[3])] : null;
+    if (!match) return null;
+    // 夾在 0–255,避免超範圍值算出壞 hex / 偏移色
+    const clamp = n => Math.max(0, Math.min(255, parseInt(n, 10)));
+    return [clamp(match[1]), clamp(match[2]), clamp(match[3])];
 }
 
 function parseCMYK(cmykStr) {

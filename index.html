@@ -27,7 +27,7 @@
     <meta name="twitter:description" content="輸入色號或 HEX,即查到所有品牌的相近色號。為業主與承包商打造。">
     <meta name="twitter:image" content="https://paint.zengzhisui.com/%E5%BD%A2%E8%B1%A1/%E6%BC%86%E5%BD%A9LOGO.png">
 
-    <link rel="stylesheet" href="styles.css?v=20260529n">
+    <link rel="stylesheet" href="styles.css?v=20260529o">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="icon" type="image/png" href="形象/漆彩LOGO.png">
 </head>
@@ -262,7 +262,7 @@
 
     <!-- 我的收藏彈窗 -->
     <div class="modal-overlay" id="fav-modal" style="display:none;" onclick="closeFavorites(event)">
-        <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal" role="dialog" aria-modal="true" aria-label="我的收藏" onclick="event.stopPropagation()">
             <div class="modal-header">
                 <h3>我的收藏</h3>
                 <button class="modal-close" onclick="closeFavorites(event)">×</button>
@@ -276,7 +276,7 @@
 
     <!-- 最近查詢彈窗 -->
     <div class="modal-overlay" id="hist-modal" style="display:none;" onclick="closeHistory(event)">
-        <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal" role="dialog" aria-modal="true" aria-label="最近查詢" onclick="event.stopPropagation()">
             <div class="modal-header">
                 <h3>最近查詢</h3>
                 <button class="modal-close" onclick="closeHistory(event)">×</button>
@@ -291,6 +291,6 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260529n"></script>
+    <script src="script.js?v=20260529o"></script>
 </body>
 </html>
