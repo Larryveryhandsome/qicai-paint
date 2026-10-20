@@ -2,8 +2,8 @@
 
 業主、承包商的色號對照工具。輸入任何品牌的色號或 HEX,即可查到其他品牌的相近色號,並顯示 RGB / CMYK 數值,方便採購與印刷溝通。
 
-**部署位置:** `paint.zengzhisui.com`(規劃中)
-**狀態:** v2 開發中,2026 Q1 重啟
+**線上試用:** <https://larryveryhandsome.github.io/qicai-paint/>
+**狀態:** Phase 1 MVP 可用
 
 ## 快速啟動(本機)
 
@@ -15,6 +15,10 @@ python -m http.server 8766
 ```
 
 不需要任何後端 — 完全是靜態 HTML + JS + JSON。
+
+## 需要哪些金鑰?
+
+不需要。網站沒有後端,不呼叫任何需要 API key / token 的服務(「附近油漆行」使用 Google 地圖公開嵌入,免金鑰;爬蟲腳本只讀公開網頁)。
 
 ## 專案結構
 
@@ -33,7 +37,6 @@ python -m http.server 8766
 │   ├── build_database.py   # 整合 raw → colors.json + brands.json
 │   └── ...
 ├── data/raw/               # 爬蟲原始檔 (gitignore,可重建)
-├── 開發規劃-2026Q1.md       # 完整開發計畫
 └── .claude/launch.json     # Claude Preview 設定
 ```
 
@@ -54,7 +57,7 @@ python -m http.server 8766
 | 區域標準 | CNCS 中國色彩體系 | 1,000 | colortell |
 | 區域標準 | 中國建築色卡 CBCC | 1,026 | colortell |
 
-YuXun 點名的 P0 品牌(虹牌、青葉、得利、立邦)中,**虹牌、得利、立邦已到位**。
+主要市售品牌(虹牌、青葉、得利、立邦)中,**虹牌、得利、立邦已到位**。
 
 **青葉待補:** 青葉官網([chingyehpaint.com.tw](https://www.chingyehpaint.com.tw))為 Nuxt.js 動態頁,**只有色號、沒有 RGB/HEX**。唯一有青葉 RGB 的是 U7 優漆網(競品站),不宜直接爬。建議:向青葉原廠索取色卡電子檔,或人工建檔後用「上傳自有色卡」功能匯入。
 
@@ -89,17 +92,30 @@ python tools/build_database.py
 ## 已知限制
 
 - **手機螢幕顯示色 ≠ 實際油漆色**:RGB ↔ CMYK 顏色空間天生有差異,且油漆色受光源、底材、批次影響。網站結果僅供溝通與初步篩選,實際以實體色卡為準。
-- **缺台灣本土品牌**:虹牌、青葉、TOA 還沒納入(colortell 是中國站,沒收錄這些)。Phase 2 補。
+- **尚缺部分台灣本土品牌**:青葉、TOA 還沒納入(colortell 是中國站,沒收錄這些)。
 - **PANTONE 名稱為簡體中文**:colortell 來源是中國站,部分色名為簡體(如「美妙约会」)。台灣使用者可以對照色號使用,不影響功能。
 
 ## 開發路線圖
-
-詳見 [開發規劃-2026Q1.md](開發規劃-2026Q1.md)。
 
 **Phase 1 (MVP):** 多廠牌色號搜尋 ✅ 大致完成
 **Phase 2:** 市價、附近油漆行、廣告位、收藏
 **Phase 3:** 空間模擬圖、AI 拍照取色
 
-## 授權
+## 授權與資料
 
-留白事務所有限公司內部專案。色號資料整合自 colortell.com 公開色卡資料,僅供非商業性比對參考。
+程式碼由留白事務所公開供參考與試用;原則上不提供任何準確度保證。色號資料整合自 colortell.com 與虹牌官網公開色卡資料,僅供非商業性比對參考,實際使用請自行確認各資料來源之使用條款。(尚未附正式授權條款,如需轉用或商用,原則上請先與我們聯繫。)
+
+## 🛠️ 需要客製化?
+
+這個工具是開源的,可以免費使用。如果你想要:
+- 改成符合你們公司的流程、欄位或品牌
+- 串接你現在在用的系統(LINE、Google 表單、POS、會計軟體……)
+- 幫你安裝、架站、教學,或長期維護
+
+歡迎加 LINE 跟我們聊。我們會依需求的範圍與複雜度報價,原則上以實際報價單為準。
+
+<a href="https://lin.ee/pdYGARu"><img src="https://scdn.line-apps.com/n/line_add_friends/btn/zh-Hant.png" alt="加入好友" height="36"></a>
+
+- 💬 LINE 官方帳號:[@812ibtir](https://lin.ee/pdYGARu)(請註明「漆彩 客製化」)
+- 🏢 留白事務所:網頁設計、AI 自動化、房仲遠端助理
+- 👤 作者:[林其衞 Larry](https://github.com/Larryveryhandsome)
