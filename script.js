@@ -6,12 +6,13 @@ let brandCategoryById = {};    // 內部 id → category (paint / standard)
 let brandPriceQueryById = {};  // 內部 id → 比價搜尋關鍵字 (僅 paint 品牌有)
 let lastQuery = null;          // 記住最近一次查詢,供切換「只看油漆」時重算
 let colorsReady = false;       // colors.json 是否已載入完成
+let brandsPromise = null;      // brands.json 載入 Promise (colors 必須等它,否則品牌名/分類會錯)
 let colorsPromise = null;      // 進行中的載入 Promise (避免重複抓)
 
 // 初始化
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
-    loadBrands();          // 品牌清單小,首頁就載
+    brandsPromise = loadBrands(); // 品牌清單小,首頁就載
     setupColorsPrefetch(); // 色號大檔延遲到接近查詢時才抓
 });
 
@@ -129,6 +130,7 @@ function ensureColors() {
     if (colorsPromise) return colorsPromise;
     colorsPromise = (async () => {
         try {
+            if (brandsPromise) await brandsPromise; // 先等品牌表,避免 brand/category 被填成 id/other
             const colorsRes = await fetch('colors.json', { cache: 'no-cache' });
             if (!colorsRes.ok) throw new Error('colors.json HTTP ' + colorsRes.status);
             const payload = await colorsRes.json();
@@ -182,7 +184,7 @@ function populateBrandUI() {
     const select = document.getElementById('brand-select');
     if (select) {
         // 分兩組:市售油漆 vs 色彩標準,讓業主一眼找到要的油漆品牌(不必在 PANTONE 裡翻)
-        const opt = b => `<option value="${b.id}">${b.name}${b.name_en ? ' ' + b.name_en : ''}</option>`;
+        const opt = b => `<option value="${escapeHtml(b.id)}">${escapeHtml(b.name)}${b.name_en ? ' ' + escapeHtml(b.name_en) : ''}</option>`;
         const paint = brandsCatalog.filter(b => b.category === 'paint');
         const other = brandsCatalog.filter(b => b.category !== 'paint');
         let html = '<option value="">請選擇品牌</option>';
@@ -193,7 +195,7 @@ function populateBrandUI() {
     const grid = document.getElementById('brands-grid');
     if (grid) {
         grid.innerHTML = brandsCatalog.map(b =>
-            `<div class="brand-item">${b.name}${b.name_en ? ' ' + b.name_en : ''}</div>`
+            `<div class="brand-item">${escapeHtml(b.name)}${b.name_en ? ' ' + escapeHtml(b.name_en) : ''}</div>`
         ).join('');
     }
 }
@@ -221,11 +223,8 @@ function searchByCode() {
     const brandName = getBrandName(brand);
     const codeLower = code.toLowerCase();
 
-    // 精準命中 (品牌一致 且 色號完全相符或包含);String() 防色號為數字時崩潰
-    const matches = colorDatabase.filter(color =>
-        color.brand === brandName &&
-        String(color.code || '').toLowerCase().includes(codeLower)
-    );
+    // 品牌一致且色號相符;完全相符優先,其次前綴,最後才是包含 (避免輸入 5R/1/2 卻命中 2.5R/1/2)
+    const matches = findCodeMatches(colorDatabase, brand, brandName, code);
 
     if (matches.length === 0) {
         showNotification(`在 ${brandName} 找不到色號「${code}」`, 'warning');
@@ -239,6 +238,26 @@ function searchByCode() {
     addHistory({ kind: 'code', brand: seed.brand, brand_id: seed.brand_id, code: seed.code, hex: seed.hex, name: seed.name });
     lastQuery = { seed, showSeed: true };
     runComparison();
+}
+
+// 依品牌+色號找候選,排序:完全相符 > 第一段(空白前)相符 > 前綴 > 包含
+function findCodeMatches(db, brandId, brandName, code) {
+    const q = String(code || '').trim().toLowerCase();
+    if (!q) return [];
+    const scored = [];
+    for (const color of db) {
+        if (!(color.brand_id === brandId || color.brand === brandName)) continue;
+        const c = String(color.code == null ? '' : color.code).toLowerCase();
+        let rank;
+        if (c === q) rank = 0;
+        else if (c.split(/\s+/)[0] === q) rank = 1;
+        else if (c.startsWith(q)) rank = 2;
+        else if (c.includes(q)) rank = 3;
+        else continue;
+        scored.push([rank, color]);
+    }
+    scored.sort((a, b) => a[0] - b[0]); // Array.sort 穩定,同級維持原順序
+    return scored.map(x => x[1]);
 }
 
 // 色碼查詢功能
@@ -558,6 +577,10 @@ function renderCard(color, opts = {}) {
         ? color.rgb
         : (hexToRgb(color.hex || '') || [0, 0, 0]);
     const cmyk = Array.isArray(color.cmyk) ? color.cmyk : rgbToCmyk(rgb);
+    // 數值欄位一律轉成數字再輸出:收藏來自 localStorage (同網域 *.github.io 下其他頁面可寫入),不可信
+    const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+    const rgbTxt = rgb.map(num).join(', ');
+    const cmykTxt = cmyk.map(num).join(', ');
     // hex 會放進 style,只允許合法色碼,否則用安全預設(防 CSS injection)
     const safeHex = /^#?[0-9A-Fa-f]{3,8}$/.test(String(color.hex || '')) ? color.hex : '#cccccc';
 
@@ -592,7 +615,7 @@ function renderCard(color, opts = {}) {
     };
     const dataColor = encodeURIComponent(JSON.stringify(slim));
     // 一鍵複製:業主查到色後最常做的事 — 把「品牌 色號 + 色碼」傳給油漆行
-    const copyText = `${color.brand || ''} ${color.code || ''}　HEX ${color.hex || ''}　RGB ${rgb.join(',')}`.trim();
+    const copyText = `${color.brand || ''} ${color.code || ''}　HEX ${color.hex || ''}　RGB ${rgbTxt}`.trim();
     const dataCopy = encodeURIComponent(copyText);
     return `
         <div class="result-card fade-in${color.isSeed ? ' is-seed' : ''}">
@@ -602,8 +625,8 @@ function renderCard(color, opts = {}) {
                 <h4>${nameLine} ${catTag}</h4>
                 <p>色號: ${escapeHtml(color.code)}</p>
                 <p>HEX: ${escapeHtml(color.hex)}</p>
-                <p>RGB: ${rgb.join(', ')}</p>
-                <p>CMYK: ${cmyk.join(', ')}</p>
+                <p>RGB: ${rgbTxt}</p>
+                <p>CMYK: ${cmykTxt}</p>
                 ${priceLine}
                 ${badge}
                 <div class="card-actions">
