@@ -118,4 +118,4 @@ python tools/build_database.py
 
 - 💬 LINE 官方帳號:[@812ibtir](https://lin.ee/pdYGARu)(請註明「漆彩 客製化」)
 - 🏢 留白事務所:網頁設計、AI 自動化、房仲遠端助理
-- 👤 作者:[林其衞 Larry](https://github.com/Larryveryhandsome)
+- 👤 作者：[留白事務所](https://github.com/Larryveryhandsome)
