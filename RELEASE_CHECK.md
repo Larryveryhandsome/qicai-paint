@@ -18,7 +18,7 @@
 | 4 | 完成使用者任務 | ✅ | Playwright 桌機＋375px 各 10 項全過：以色名／色號（大小寫）／HEX 查詢、色系篩選、查無結果、遠離色庫的 HEX（品紅）走最接近備援、收藏、無橫向捲動、頁面上沒有任何廠牌名稱、console 無錯誤。 |
 | 5 | 安全／效能／環境 | ⚠️ | 無後端、無個資；XSS 測試通過（色卡文字、竄改的收藏資料）。全色庫掃描平均 < 100 ms（有測試）。只測 Chromium，Firefox／Safari 未測。 |
 | 6 | 資料 | ⚠️ | 色庫為本專案自產（`tools/build_palette.py --check` 通過，產出與 `colors.json` 一致）。舊版以廠牌色號存的收藏／查詢紀錄換版後對不到色（README 已註明，可在「最近」清除）。收藏只存瀏覽器，沒有匯出備份。 |
-| 7 | 交付版本 | ⚠️ | 測的版本＝發布版本（a36de96 乾淨 clone，`npm test` 10/10）。已新增 GitHub Actions（每次 push 自動跑 `npm test`）。**現有檔案已無廠牌資料；但 git 歷史（22 筆只在歷史中的命中，`_統籌/gate_C/audit_qicai-paint.md`）仍含 colortell／虹牌爬來的色號資料、爬蟲腳本、舊網域 zengzhisui、本人姓名。需全新歷史。** 另外沒有 LICENSE 檔（README 寫「如需轉用請先聯繫」），要不要附授權由店長決定。 |
+| 7 | 交付版本 | ⚠️ | 測的版本＝發布版本（a36de96 乾淨 clone，`npm test` 10/10）。已新增 GitHub Actions（每次 push 自動跑 `npm test`）。**現有檔案已無廠牌資料；但 git 歷史（22 筆只在歷史中的命中，`_統籌/gate_C/audit_qicai-paint.md`）仍含 colortell／虹牌爬來的色號資料、爬蟲腳本、舊自訂網域、本人姓名。需全新歷史。** 另外沒有 LICENSE 檔（README 寫「如需轉用請先聯繫」），要不要附授權由店長決定。 |
 | 8 | 出事能恢復 | ✅ | 靜態網站：出錯用 `git revert` 重新部署，GitHub Pages 約數分鐘生效；發布後確認 Pages 回 200。沒有資料庫變更，不需回復資料。 |
 
 ## 測試環境與範圍
