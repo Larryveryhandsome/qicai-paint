@@ -3,10 +3,6 @@
 網站.txt
 [LINE]*.txt
 
-# 爬蟲原始檔 (data/raw/)
-# 重新爬即可重現,不必版控
-data/raw/
-
 # Python
 __pycache__/
 *.pyc

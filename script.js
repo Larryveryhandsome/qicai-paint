@@ -1,19 +1,15 @@
 // 全域變數
 let colorDatabase = [];
-let brandsCatalog = [];       // 從 brands.json 載入
-let brandsByCode = {};         // 內部 id → 顯示名
-let brandCategoryById = {};    // 內部 id → category (paint / standard)
-let brandPriceQueryById = {};  // 內部 id → 比價搜尋關鍵字 (僅 paint 品牌有)
+let colorGroups = [];          // 從 colors.json 載入的色系清單 (如「白色系」)
+const LIB_ID = 'qc';           // 自整色庫的內部代號 (收藏／紀錄用)
 let lastQuery = null;          // 記住最近一次查詢,供切換「只看油漆」時重算
 let colorsReady = false;       // colors.json 是否已載入完成
-let brandsPromise = null;      // brands.json 載入 Promise (colors 必須等它,否則品牌名/分類會錯)
 let colorsPromise = null;      // 進行中的載入 Promise (避免重複抓)
 
 // 初始化
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
-    brandsPromise = loadBrands(); // 品牌清單小,首頁就載
-    setupColorsPrefetch(); // 色號大檔延遲到接近查詢時才抓
+    setupColorsPrefetch(); // 色庫延遲到接近查詢時才抓
 });
 
 // 初始化應用程式
@@ -106,43 +102,27 @@ function setupColorConversion() {
     labInput.addEventListener('input', () => convertFromLAB(labInput.value));
 }
 
-// 載入 brands.json (小檔,首頁就需要 — 填下拉選單與「支援品牌」格)
-async function loadBrands() {
-    try {
-        const brandsRes = await fetch('brands.json', { cache: 'no-cache' });
-        if (!brandsRes.ok) throw new Error('brands.json HTTP ' + brandsRes.status);
-        brandsCatalog = await brandsRes.json();
-        brandsByCode = Object.fromEntries(brandsCatalog.map(b => [b.id, b.name]));
-        brandCategoryById = Object.fromEntries(brandsCatalog.map(b => [b.id, b.category || 'other']));
-        brandPriceQueryById = Object.fromEntries(brandsCatalog.filter(b => b.price_query).map(b => [b.id, b.price_query]));
-        populateBrandUI();
-    } catch (err) {
-        console.error('載入 brands.json 失敗', err);
-        showNotification('品牌清單載入失敗', 'error');
-        brandsCatalog = [];
-    }
-}
-
-// 延遲載入 colors.json (~512KB):首頁不需要,首次查詢或捲到查詢區才抓。
+// 延遲載入 colors.json (自整色庫,數十 KB):首次查詢或捲到查詢區才抓。
 // 可重入(多次呼叫只抓一次);失敗時清掉 promise 以便重試。
 function ensureColors() {
     if (colorsReady) return Promise.resolve();
     if (colorsPromise) return colorsPromise;
     colorsPromise = (async () => {
         try {
-            if (brandsPromise) await brandsPromise; // 先等品牌表,避免 brand/category 被填成 id/other
             const colorsRes = await fetch('colors.json', { cache: 'no-cache' });
             if (!colorsRes.ok) throw new Error('colors.json HTTP ' + colorsRes.status);
             const payload = await colorsRes.json();
-            // 支援兩種格式: 純陣列 (舊) 或 {colors: [...]} (新 schema_version 2.0)
+            // 格式: {schema_version:"3.0", groups:[...], colors:[{code,name,group,hex,rgb,lab,cmyk}]}
             colorDatabase = Array.isArray(payload) ? payload : (payload.colors || []);
-            // 把 brand_id 對應回 brand 顯示名稱;若 lab/cmyk 缺漏則補上
+            colorGroups = Array.isArray(payload.groups) ? payload.groups.map(String) : [];
+            // 顯示用欄位:brand 欄沿用舊結構,內容改為「色系」;lab/cmyk 缺漏則補上
             colorDatabase.forEach(c => {
-                if (!c.brand && c.brand_id) c.brand = brandsByCode[c.brand_id] || c.brand_id;
-                if (!c.category) c.category = brandCategoryById[c.brand_id] || 'other';
+                c.brand_id = LIB_ID;
+                c.brand = c.group || '漆彩色庫';
                 if (!c.lab && c.rgb) c.lab = rgbToLab(c.rgb);
                 if (!c.cmyk && c.rgb) c.cmyk = rgbToCmyk(c.rgb);
             });
+            populateGroupUI();
             colorsReady = true;
             console.log(`已載入 ${colorDatabase.length} 筆色號資料`);
         } catch (err) {
@@ -164,7 +144,7 @@ function withColors(fn) {
 
 // 預抓:聚焦查詢輸入、或查詢區進入視窗時就先載色號,讓使用者按下查詢前通常已就緒
 function setupColorsPrefetch() {
-    ['brand-select', 'color-code', 'hex-input', 'rgb-input'].forEach(id => {
+    ['color-code', 'hex-input', 'rgb-input'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('focus', () => ensureColors(), { once: true });
     });
@@ -179,24 +159,19 @@ function setupColorsPrefetch() {
     }
 }
 
-// 將 brands.json 填入 <select> 與 about 的支援品牌格
-function populateBrandUI() {
-    const select = document.getElementById('brand-select');
+// 將色系清單填入結果篩選下拉與「色庫色系」格
+function populateGroupUI() {
+    const select = document.getElementById('group-filter');
     if (select) {
-        // 分兩組:市售油漆 vs 色彩標準,讓業主一眼找到要的油漆品牌(不必在 PANTONE 裡翻)
-        const opt = b => `<option value="${escapeHtml(b.id)}">${escapeHtml(b.name)}${b.name_en ? ' ' + escapeHtml(b.name_en) : ''}</option>`;
-        const paint = brandsCatalog.filter(b => b.category === 'paint');
-        const other = brandsCatalog.filter(b => b.category !== 'paint');
-        let html = '<option value="">請選擇品牌</option>';
-        if (paint.length) html += `<optgroup label="市售油漆">${paint.map(opt).join('')}</optgroup>`;
-        if (other.length) html += `<optgroup label="色彩標準">${other.map(opt).join('')}</optgroup>`;
-        select.innerHTML = html;
+        select.innerHTML = '<option value="">全部色系</option>' +
+            colorGroups.map(g => `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join('');
     }
     const grid = document.getElementById('brands-grid');
     if (grid) {
-        grid.innerHTML = brandsCatalog.map(b =>
-            `<div class="brand-item">${escapeHtml(b.name)}${b.name_en ? ' ' + escapeHtml(b.name_en) : ''}</div>`
-        ).join('');
+        grid.innerHTML = colorGroups.map(g => {
+            const n = colorDatabase.filter(c => c.group === g).length;
+            return `<div class="brand-item">${escapeHtml(g)} (${n})</div>`;
+        }).join('');
     }
 }
 
@@ -208,51 +183,46 @@ function scrollToSection(sectionId) {
     }
 }
 
-// 色號查詢功能 — 先在 colorDatabase 找符合 (品牌+色號) 的色號,再以它的 LAB 找相近
+// 色號／色名查詢 — 先在自整色庫找符合的色,再以它的 LAB 找相近色
 function searchByCode() {
-    const brand = document.getElementById('brand-select').value;
     const code = document.getElementById('color-code').value.trim();
 
-    if (!brand || !code) {
-        showNotification('請選擇品牌並輸入色號', 'error');
+    if (!code) {
+        showNotification('請輸入色號或色名', 'error');
         return;
     }
 
     if (!colorsReady) { withColors(searchByCode); return; }
 
-    const brandName = getBrandName(brand);
-    const codeLower = code.toLowerCase();
-
-    // 品牌一致且色號相符;完全相符優先,其次前綴,最後才是包含 (避免輸入 5R/1/2 卻命中 2.5R/1/2)
-    const matches = findCodeMatches(colorDatabase, brand, brandName, code);
+    // 完全相符優先,其次前綴,最後才是包含 (避免輸入 QC-01 卻命中 QC-101)
+    const matches = findCodeMatches(colorDatabase, code);
 
     if (matches.length === 0) {
-        showNotification(`在 ${brandName} 找不到色號「${code}」`, 'warning');
+        showNotification(`找不到色號或色名「${code}」(色號格式如 QC-025)`, 'warning');
         displayResults([]);
         return;
     }
 
-    // 用第一筆命中色作為查詢來源,找其他品牌的相近色
     const seed = matches[0];
-    showNotification(`已找到 ${brandName} ${seed.code},正在比對其他品牌...`, 'info');
+    showNotification(`已找到 ${seed.code} ${seed.name || ''},正在比對相近色...`, 'info');
     addHistory({ kind: 'code', brand: seed.brand, brand_id: seed.brand_id, code: seed.code, hex: seed.hex, name: seed.name });
     lastQuery = { seed, showSeed: true };
     runComparison();
 }
 
-// 依品牌+色號找候選,排序:完全相符 > 第一段(空白前)相符 > 前綴 > 包含
-function findCodeMatches(db, brandId, brandName, code) {
+// 依色號或色名找候選,排序:完全相符 > 第一段相符 > 前綴 > 包含
+function findCodeMatches(db, code) {
     const q = String(code || '').trim().toLowerCase();
     if (!q) return [];
     const scored = [];
     for (const color of db) {
-        if (!(color.brand_id === brandId || color.brand === brandName)) continue;
         const c = String(color.code == null ? '' : color.code).toLowerCase();
+        const n = String(color.name == null ? '' : color.name).toLowerCase();
         let rank;
-        if (c === q) rank = 0;
+        if (c === q || n === q) rank = 0;
         else if (c.split(/\s+/)[0] === q) rank = 1;
-        else if (c.startsWith(q)) rank = 2;
-        else if (c.includes(q)) rank = 3;
+        else if (c.startsWith(q) || n.startsWith(q)) rank = 2;
+        else if (c.includes(q) || n.includes(q)) rank = 3;
         else continue;
         scored.push([rank, color]);
     }
@@ -310,19 +280,26 @@ function runColorSearch(targetColor) {
     runComparison();
 }
 
-// 依當前「只看市售油漆」設定,跑比對並顯示 (供查詢與切換共用)
+// 依當前「色系篩選」設定,跑比對並顯示 (供查詢與切換共用)
+// ΔE 10 以內沒有相近色時,退而顯示最接近的 6 色並註明,讓查詢不會空手而回
 function runComparison(opts) {
     if (!lastQuery) return;
-    const paintOnly = document.getElementById('paint-only') && document.getElementById('paint-only').checked;
-    const pool = paintOnly ? colorDatabase.filter(c => c.category === 'paint') : colorDatabase;
-    const similar = findSimilarColors(lastQuery.seed, pool);
+    const sel = document.getElementById('group-filter');
+    const group = sel ? sel.value : '';
+    const pool = group ? colorDatabase.filter(c => c.group === group) : colorDatabase;
+    let similar = findSimilarColors(lastQuery.seed, pool);
+    let fallback = false;
+    if (similar.length === 0) {
+        similar = findSimilarColors(lastQuery.seed, pool, Infinity, 6);
+        fallback = similar.length > 0;
+    }
     const list = lastQuery.showSeed
         ? [{ ...lastQuery.seed, similarity: 0, isSeed: true }, ...similar]
         : similar;
-    displayResults(list, opts);
+    displayResults(list, Object.assign({ fallback }, opts));
 }
 
-// 切換「只看市售油漆」時重新比對 (由 checkbox onchange 呼叫);不捲動,免得點 checkbox 頁面跳走
+// 切換「色系篩選」時重新比對 (由 select onchange 呼叫);不捲動,免得操作時頁面跳走
 function rerenderResults() {
     if (lastQuery) runComparison({ scroll: false });
 }
@@ -594,28 +571,16 @@ function renderCard(color, opts = {}) {
             ? '<span class="similarity-score" style="background:#000;color:#fff;">查詢來源</span>'
             : (typeof color.similarity === 'number' ? `<span class="similarity-score">ΔE ${color.similarity.toFixed(2)}</span>` : '');
     }
-    // 市價 (Phase 2:資料若含 price 欄位才顯示)
-    const priceLine = color.price ? `<p class="price-line">參考價: ${escapeHtml(color.price)}</p>` : '';
-    // 比價連結 (僅市售油漆;油漆價格綁「品牌×產品線×容量」而非單一色號,故導向品牌層級的即時比價)
-    let priceLink = '';
-    if (color.category === 'paint') {
-        const q = brandPriceQueryById[color.brand_id] || (String(color.brand || '').split(/\s+/)[0] + ' 乳膠漆');
-        const url = 'https://www.google.com/search?tbm=shop&q=' + encodeURIComponent(q);
-        priceLink = `<a class="price-link" href="${url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">查市價 / 比價 →</a>`;
-    }
-    // 類型標示:市售油漆 vs 色彩標準
-    const catTag = color.category === 'paint'
-        ? '<span class="cat-tag cat-paint">市售油漆</span>'
-        : (color.category === 'standard' ? '<span class="cat-tag cat-standard">色彩標準</span>' : '');
+    const catTag = ''; // 色系已顯示在標題(brand 欄=色系),不重複標示
     // 收藏按鈕需要的精簡 color 物件
     const slim = {
         brand: color.brand, brand_id: color.brand_id, code: color.code,
         name: color.name || '', hex: color.hex, rgb: rgb, cmyk: cmyk, lab: color.lab,
-        category: color.category || 'other', price: color.price || null
+        group: color.group || ''
     };
     const dataColor = encodeURIComponent(JSON.stringify(slim));
-    // 一鍵複製:業主查到色後最常做的事 — 把「品牌 色號 + 色碼」傳給油漆行
-    const copyText = `${color.brand || ''} ${color.code || ''}　HEX ${color.hex || ''}　RGB ${rgbTxt}`.trim();
+    // 一鍵複製:把「色號 色名 + 色碼」傳給油漆行,請對方依色碼調色
+    const copyText = `${color.code || ''} ${color.name || ''}　HEX ${color.hex || ''}　RGB ${rgbTxt}`.trim();
     const dataCopy = encodeURIComponent(copyText);
     return `
         <div class="result-card fade-in${color.isSeed ? ' is-seed' : ''}">
@@ -627,11 +592,9 @@ function renderCard(color, opts = {}) {
                 <p>HEX: ${escapeHtml(color.hex)}</p>
                 <p>RGB: ${rgbTxt}</p>
                 <p>CMYK: ${cmykTxt}</p>
-                ${priceLine}
                 ${badge}
                 <div class="card-actions">
-                    <button class="copy-btn" data-copy="${dataCopy}" onclick="copyColor(this)" title="複製品牌色號與色碼,可貼給油漆行">⧉ 複製色號</button>
-                    ${priceLink}
+                    <button class="copy-btn" data-copy="${dataCopy}" onclick="copyColor(this)" title="複製色號與色碼,可貼給油漆行">⧉ 複製色號</button>
                 </div>
             </div>
         </div>`;
@@ -672,9 +635,12 @@ function displayResults(results, opts = {}) {
     const grid = document.getElementById('results-grid');
 
     if (!results || results.length === 0) {
-        grid.innerHTML = '<p style="text-align: center; color: #666;">未找到相似的市售油漆,可取消「只比對市售油漆」以納入 PANTONE 等更多色票</p>';
+        grid.innerHTML = '<p style="text-align: center; color: #666;">這個色系裡沒有可比對的顏色,請改選「全部色系」再試</p>';
     } else {
-        grid.innerHTML = results.map(c => renderCard(c)).join('');
+        const note = opts.fallback
+            ? '<p class="fallback-note" style="grid-column:1/-1;text-align:center;color:#666;">色庫中沒有 ΔE 10 以內的相近色,以下是最接近的幾個,僅供參考。</p>'
+            : '';
+        grid.innerHTML = note + results.map(c => renderCard(c)).join('');
     }
 
     // 更新結果數 (不計查詢來源卡)
@@ -715,10 +681,6 @@ function previewOnWall(hex) {
     scrollToSection('convert');
 }
 
-// 工具函數 — 從 brands.json 動態查 (替代寫死的對應表)
-function getBrandName(brandCode) {
-    return brandsByCode[brandCode] || brandCode;
-}
 
 // HTML 跳脫:防止上傳色卡的資料注入 HTML/破壞版面 (self-XSS)
 function escapeHtml(s) {
@@ -1056,9 +1018,8 @@ function replayHistory(idx) {
         runColorSearch(rgb);
         return;
     }
-    // 品牌色號:回色庫找出來源色
-    const seed = colorDatabase.find(c =>
-        (c.brand_id === h.brand_id || c.brand === h.brand) && String(c.code) === String(h.code));
+    // 色庫色號:回色庫找出來源色
+    const seed = colorDatabase.find(c => String(c.code) === String(h.code));
     if (!seed) {
         showNotification('找不到此色號(色庫可能已更新)', 'warning');
         return;

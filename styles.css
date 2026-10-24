@@ -1055,3 +1055,9 @@ body {
 .copy-btn:active {
     transform: scale(0.97);
 }
+
+/* 結果篩選列的色系下拉 */
+.results-filter .form-control {
+    width: auto;
+    min-width: 160px;
+}
