@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>漆彩 — 油漆色號與近似色查詢工具</title>
+    <meta name="description" content="輸入色號、色名或 HEX,即查到色庫中的近似顏色,並顯示 RGB／CMYK。為業主與承包商打造的色彩溝通工具(色庫為自行整理,不含任何廠牌色號)。">
+    <meta name="theme-color" content="#000000">
+
+    <!-- 社群分享預覽 (LINE / Facebook / Twitter) -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="漆彩">
+    <meta property="og:title" content="漆彩 — 油漆色號與近似色查詢工具">
+    <meta property="og:description" content="輸入色號、色名或 HEX,即查到近似顏色與色碼,方便跟油漆行溝通調色。為業主與承包商打造。">
+    <meta property="og:url" content="https://larryveryhandsome.github.io/qicai-paint/">
+    <meta property="og:image" content="https://larryveryhandsome.github.io/qicai-paint/%E5%BD%A2%E8%B1%A1/%E6%BC%86%E5%BD%A9LOGO.png">
+    <meta property="og:locale" content="zh_TW">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="漆彩 — 油漆色號與近似色查詢工具">
+    <meta name="twitter:description" content="輸入色號、色名或 HEX,即查到近似顏色與色碼。為業主與承包商打造。">
+    <meta name="twitter:image" content="https://larryveryhandsome.github.io/qicai-paint/%E5%BD%A2%E8%B1%A1/%E6%BC%86%E5%BD%A9LOGO.png">
+
+    <link rel="stylesheet" href="styles.css?v=20261024a">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="形象/漆彩LOGO.png">
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <div class="nav-container">
+                <div class="logo">
+                    <img src="形象/漆彩LOGO.png" alt="漆彩" class="logo-img">
+                    <span class="logo-text">漆彩</span>
+                </div>
+                <button class="nav-toggle" id="nav-toggle" aria-label="開啟選單" aria-expanded="false" aria-controls="nav-links" onclick="toggleNav()">☰</button>
+                <div class="nav-links" id="nav-links">
+                    <a href="#home" class="nav-link active">首頁</a>
+                    <a href="#search" class="nav-link">色號查詢</a>
+                    <a href="#convert" class="nav-link">色碼轉換</a>
+                    <a href="#stores" class="nav-link">附近油漆行</a>
+                    <a href="#about" class="nav-link">關於</a>
+                    <a href="#" class="nav-link nav-hist" onclick="openHistory(event)">↺ 最近<span id="hist-count" class="hist-count"></span></a>
+                    <a href="#" class="nav-link nav-fav" onclick="openFavorites(event)">★ 收藏<span id="fav-count" class="fav-count"></span></a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="main">
+        <!-- 首頁區塊 -->
+        <section id="home" class="hero">
+            <div class="hero-container">
+                <div class="hero-content">
+                    <h1 class="hero-title">業主、承包商的<br>油漆色號與近似色查詢工具</h1>
+                    <p class="hero-subtitle">想跟油漆行說「我要這種顏色」，卻講不清楚？<br>輸入色號、色名或 HEX，馬上查到近似色與可直接報給師傅的色碼。</p>
+                    <div class="hero-buttons">
+                        <button class="btn btn-primary" onclick="scrollToSection('search')">開始查詢</button>
+                        <button class="btn btn-secondary" onclick="scrollToSection('convert')">色碼轉換</button>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <div class="color-palette">
+                        <div class="color-card" style="background-color: #FF6B6B;"></div>
+                        <div class="color-card" style="background-color: #4ECDC4;"></div>
+                        <div class="color-card" style="background-color: #45B7D1;"></div>
+                        <div class="color-card" style="background-color: #96CEB4;"></div>
+                        <div class="color-card" style="background-color: #FFEAA7;"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 色號查詢區塊 -->
+        <section id="search" class="search-section">
+            <div class="container">
+                <h2 class="section-title">色號查詢</h2>
+                <p class="section-subtitle">輸入漆彩色號（如 QC-025）、色名或色碼，找到近似顏色</p>
+                
+                <div class="search-container">
+                    <div class="search-tabs">
+                        <button class="tab-btn active" data-tab="code">依色號／色名查</button>
+                        <button class="tab-btn" data-tab="color">依 HEX / RGB 查</button>
+                    </div>
+                    
+                    <div class="tab-content active" id="code-tab">
+                        <div class="search-form">
+                            <div class="form-group">
+                                <label for="color-code">色號或色名</label>
+                                <input type="text" id="color-code" class="form-control" placeholder="例如：QC-025 或 米白">
+                            </div>
+                            <button class="btn btn-primary" onclick="searchByCode()">查詢</button>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-content" id="color-tab">
+                        <div class="search-form">
+                            <div class="form-group">
+                                <label for="hex-input">HEX 色碼</label>
+                                <input type="text" id="hex-input" class="form-control" placeholder="#AABBCC">
+                            </div>
+                            <div class="form-group">
+                                <label for="rgb-input">RGB 色碼</label>
+                                <input type="text" id="rgb-input" class="form-control" placeholder="170, 187, 204">
+                            </div>
+                            <button class="btn btn-primary" onclick="searchByColor()">查詢</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="results-container" id="results-container" style="display: none;">
+                    <h3>查詢結果</h3>
+                    <div class="results-filter">
+                        <label class="filter-toggle" for="group-filter">
+                            <span class="filter-label-text">色系篩選<span class="filter-hint">只在選定色系內找近似色</span></span>
+                        </label>
+                        <select id="group-filter" class="form-control" onchange="rerenderResults()">
+                            <option value="">全部色系</option>
+                        </select>
+                        <span class="result-count" id="result-count"></span>
+                    </div>
+                    <div class="results-grid" id="results-grid"></div>
+                    <!-- 廣告版位掛勾:預留結構,有真廣告主再把 display 打開或由 JS 填入。
+                         空版位不顯示給使用者(避免看起來像半成品)。 -->
+                    <div class="ad-slot" data-slot="result-bottom" aria-hidden="true" style="display:none;">
+                        <span class="ad-label">廣告版位</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 色碼轉換區塊 -->
+        <section id="convert" class="convert-section">
+            <div class="container">
+                <h2 class="section-title">色碼轉換</h2>
+                <p class="section-subtitle">在不同色彩格式間進行精準轉換</p>
+                
+                <div class="convert-container">
+                    <div class="convert-form">
+                        <div class="form-group">
+                            <label for="convert-hex">HEX</label>
+                            <input type="text" id="convert-hex" class="form-control" placeholder="#AABBCC">
+                        </div>
+                        <div class="form-group">
+                            <label for="convert-rgb">RGB</label>
+                            <input type="text" id="convert-rgb" class="form-control" placeholder="170, 187, 204">
+                        </div>
+                        <div class="form-group">
+                            <label for="convert-cmyk">CMYK</label>
+                            <input type="text" id="convert-cmyk" class="form-control" placeholder="17, 8, 0, 20">
+                        </div>
+                        <div class="form-group">
+                            <label for="convert-lab">LAB</label>
+                            <input type="text" id="convert-lab" class="form-control" placeholder="75, -5, -10">
+                        </div>
+                    </div>
+                    <div class="color-preview">
+                        <div class="room-scene" aria-hidden="true">
+                            <div class="room-wall" id="color-preview">
+                                <span class="room-window"></span>
+                            </div>
+                            <div class="room-floor"></div>
+                            <div class="room-sofa"></div>
+                        </div>
+                        <div class="preview-info">
+                            <p>牆面模擬預覽</p>
+                            <p id="preview-text">請輸入色碼，或點查詢結果的色塊試擺上牆</p>
+                        </div>
+                        <div class="convert-actions">
+                            <button class="btn btn-primary" onclick="searchFromConverter()">用這個顏色找相近油漆</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 附近油漆行區塊 -->
+        <section id="stores" class="stores-section">
+            <div class="container">
+                <h2 class="section-title">附近油漆行</h2>
+                <p class="section-subtitle">查到色號後，找離你最近的油漆五金行採購</p>
+
+                <div class="stores-controls">
+                    <input type="text" id="store-location" class="form-control" placeholder="輸入縣市或地區，例如：台中市、台北市大安區">
+                    <button class="btn btn-primary" onclick="searchStores()">搜尋</button>
+                    <button class="btn btn-secondary" onclick="useMyLocation()">📍 用目前位置</button>
+                </div>
+
+                <div class="map-wrapper">
+                    <iframe id="stores-map" title="附近油漆行地圖" loading="lazy"
+                        referrerpolicy="no-referrer-when-downgrade"
+                        src="https://maps.google.com/maps?q=%E6%B2%B9%E6%BC%86%E8%A1%8C&output=embed"></iframe>
+                </div>
+                <p class="stores-hint">
+                    <a id="stores-link" href="https://www.google.com/maps/search/%E6%B2%B9%E6%BC%86%E8%A1%8C" target="_blank" rel="noopener">在 Google 地圖開啟 →</a>
+                    <br><small>提示：地圖會以你輸入的地區搜尋「油漆行」。若上方地圖無法顯示，請點此連結。實際營業時間與庫存請去電確認。</small>
+                </p>
+            </div>
+        </section>
+
+        <!-- 關於我們區塊 -->
+        <section id="about" class="about-section">
+            <div class="container">
+                <h2 class="section-title">關於漆彩</h2>
+                <div class="about-content">
+                    <div class="about-text">
+                        <h3>為誰打造</h3>
+                        <p>漆彩是為<strong>業主與承包商</strong>打造的色號對照工具。當你心裡有個顏色，卻很難跟油漆行說清楚，漆彩讓你輸入色號、色名或 HEX，馬上查到近似色與 RGB／CMYK 數值，方便溝通與請師傅調色。</p>
+
+                        <h3>核心功能</h3>
+                        <ul>
+                            <li>近似色比對（採用 CIEDE2000 色差演算法，ΔE &lt; 10 推薦）</li>
+                            <li>HEX / RGB / CMYK / LAB 即時互轉</li>
+                            <li>結果顯示完整 RGB 與 CMYK 數值，方便印刷與調色</li>
+                            <li>一鍵複製色號與色碼，直接貼給油漆行</li>
+                        </ul>
+
+                        <h3>使用提醒</h3>
+                        <p><small>實際油漆色彩會受光源、底材、批次差異影響，本站數值僅供溝通與初步篩選參考，最終以實體色卡與小範圍試刷為準。</small></p>
+
+                        <h3 id="brands-heading">色庫色系</h3>
+                        <div class="brands-grid" id="brands-grid">
+                            <!-- 由 JS 從 colors.json 動態載入 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>漆彩</h4>
+                    <p>油漆色號與近似色查詢工具</p>
+                </div>
+                <div class="footer-section">
+                    <h4>資料來源</h4>
+                    <p>色庫為自行整理的通用色名與近似色碼（編號 QC-xxx），不含任何廠牌色號，僅供溝通參考。</p>
+                </div>
+                <div class="footer-section">
+                    <h4>由</h4>
+                    <p>留白事務所有限公司 出品</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 漆彩 · 留白事務所有限公司</p>
+                <p class="custom-ad">需要改成你們公司的版本、幫忙安裝或串接？加 LINE 官方帳號 <a href="https://line.me/R/ti/p/@812ibtir" target="_blank" rel="noopener">@812ibtir</a>（留白事務所・林其衞），原則上 1～2 個工作天回覆報價。</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 我的收藏彈窗 -->
+    <div class="modal-overlay" id="fav-modal" style="display:none;" onclick="closeFavorites(event)">
+        <div class="modal" role="dialog" aria-modal="true" aria-label="我的收藏" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>我的收藏</h3>
+                <button class="modal-close" onclick="closeFavorites(event)">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="results-grid" id="fav-grid"></div>
+                <p id="fav-empty" class="fav-empty">尚無收藏。在查詢結果點 ★ 即可收藏色號。</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 最近查詢彈窗 -->
+    <div class="modal-overlay" id="hist-modal" style="display:none;" onclick="closeHistory(event)">
+        <div class="modal" role="dialog" aria-modal="true" aria-label="最近查詢" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>最近查詢</h3>
+                <button class="modal-close" onclick="closeHistory(event)">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="hist-list" id="hist-list"></div>
+                <p id="hist-empty" class="fav-empty">尚無查詢紀錄。查詢任一色號後會自動記錄,方便快速重查。</p>
+                <div class="hist-footer">
+                    <button class="btn btn-secondary" onclick="clearHistory()">清除紀錄</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js?v=20260529o"></script>
+</body>
+</html>
